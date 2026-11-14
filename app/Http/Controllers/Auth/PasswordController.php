@@ -3,16 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class PasswordController extends Controller
 {
-    /**
-     * Update the user's password.
-     */
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -21,9 +18,12 @@ class PasswordController extends Controller
         ]);
 
         $request->user()->update([
-            'password' => Hash::make($validated['password']),
+            'password_hash' => $validated['password'],
         ]);
 
-        return back();
+        // Perubahan kolom sandi tidak ikut tercatat oleh observer, jadi dicatat di sini.
+        ActivityLogger::record('ubah_password', 'pengguna', $request->user()->id_pengguna, 'Kata sandi diubah oleh pemilik akun');
+
+        return back()->with('status', 'Kata sandi berhasil diubah.');
     }
 }

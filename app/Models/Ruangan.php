@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ruangan extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'ruangan';
     protected $primaryKey = 'id_ruangan';
 
@@ -26,8 +28,13 @@ class Ruangan extends Model
         return $this->belongsTo(SubUnit::class, 'id_sub_unit', 'id_sub_unit');
     }
 
-    public function aset()
+    public function penempatan()
     {
-        return $this->hasMany(Aset::class, 'id_ruangan', 'id_ruangan');
+        return $this->hasMany(PenempatanAset::class, 'id_ruangan', 'id_ruangan');
+    }
+
+    public function itemMutasi()
+    {
+        return $this->hasMany(ItemMutasi::class, 'id_ruangan_tujuan', 'id_ruangan');
     }
 }

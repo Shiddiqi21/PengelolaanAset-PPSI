@@ -18,19 +18,26 @@ return new class extends Migration
             $table->string('foto_kerusakan_path', 255)->nullable();
             $table->text('hasil_pemeriksaan')->nullable();
             $table->decimal('estimasi_biaya', 15, 2)->nullable();
-            $table->boolean('perlu_vendor')->default(false);
+            $table->boolean('perlu_vendor')->nullable();
             $table->decimal('harga_penawaran', 15, 2)->nullable();
-            $table->enum('status_perbaikan', ['menunggu', 'diperiksa', 'disetujui', 'dalam_perbaikan', 'selesai', 'ditolak'])->default('menunggu');
+            // Nilai ENUM belum tercantum di ERD. Daftar ini menunggu konfirmasi.
+            $table->enum('status_perbaikan', [
+                'menunggu',
+                'diperiksa',
+                'disetujui',
+                'dalam_perbaikan',
+                'selesai',
+                'ditolak',
+            ]);
             $table->dateTime('tanggal_mulai')->nullable();
             $table->dateTime('tanggal_selesai')->nullable();
             $table->text('hasil_perbaikan')->nullable();
             $table->decimal('biaya_aktual', 15, 2)->nullable();
-            $table->timestamps();
 
-            $table->foreign('id_pengajuan')->references('id_pengajuan')->on('pengajuan')->onDelete('cascade');
+            $table->foreign('id_pengajuan')->references('id_pengajuan')->on('pengajuan');
             $table->foreign('id_aset')->references('id_aset')->on('aset');
-            $table->foreign('id_teknisi')->references('id_pengguna')->on('pengguna')->nullOnDelete();
-            $table->foreign('id_vendor')->references('id_vendor')->on('vendor')->nullOnDelete();
+            $table->foreign('id_teknisi')->references('id_pengguna')->on('pengguna');
+            $table->foreign('id_vendor')->references('id_vendor')->on('vendor');
         });
 
         Schema::create('pemeliharaan_aset', function (Blueprint $table) {
@@ -40,15 +47,15 @@ return new class extends Migration
             $table->unsignedInteger('id_vendor')->nullable();
             $table->string('jenis_pemeliharaan', 100);
             $table->date('tanggal_jadwal');
-            $table->enum('status', ['terjadwal', 'dalam_proses', 'selesai', 'dibatalkan'])->default('terjadwal');
+            // Nilai ENUM belum tercantum di ERD. Daftar ini menunggu konfirmasi.
+            $table->enum('status', ['terjadwal', 'dalam_proses', 'selesai', 'dibatalkan']);
             $table->date('tanggal_pelaksanaan')->nullable();
             $table->text('uraian')->nullable();
             $table->decimal('biaya', 15, 2)->nullable();
-            $table->timestamps();
 
-            $table->foreign('id_aset')->references('id_aset')->on('aset')->onDelete('cascade');
-            $table->foreign('id_pelaksana')->references('id_pengguna')->on('pengguna')->nullOnDelete();
-            $table->foreign('id_vendor')->references('id_vendor')->on('vendor')->nullOnDelete();
+            $table->foreign('id_aset')->references('id_aset')->on('aset');
+            $table->foreign('id_pelaksana')->references('id_pengguna')->on('pengguna');
+            $table->foreign('id_vendor')->references('id_vendor')->on('vendor');
         });
     }
 

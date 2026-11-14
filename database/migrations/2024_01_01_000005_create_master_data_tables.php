@@ -12,23 +12,20 @@ return new class extends Migration
             $table->increments('id_kategori');
             $table->string('kode_kategori', 20)->unique();
             $table->string('nama_kategori', 100);
-            $table->smallInteger('masa_manfaat_tahun')->nullable();
-            $table->timestamps();
+            $table->smallInteger('masa_manfaat_tahun');
         });
 
         Schema::create('gedung', function (Blueprint $table) {
             $table->increments('id_gedung');
             $table->string('kode_gedung', 20)->unique();
             $table->string('nama_gedung', 100);
-            $table->timestamps();
         });
 
         Schema::create('vendor', function (Blueprint $table) {
             $table->increments('id_vendor');
             $table->string('nama_vendor', 150);
-            $table->text('alamat')->nullable();
-            $table->string('kontak', 50)->nullable();
-            $table->timestamps();
+            $table->text('alamat');
+            $table->string('kontak', 50);
         });
     }
 

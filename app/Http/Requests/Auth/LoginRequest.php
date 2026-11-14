@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -13,28 +16,29 @@ use Illuminate\Validation\ValidationException;
 class LoginRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * Hash tiruan agar waktu respons tetap mirip saat username tidak ditemukan.
      */
+    private const HASH_TIRUAN = '$2y$12$JbnCPkql/7FfmhlhoT20UulYoNcF0sOp8nrzhIA8AzE3pvwl4Vp4C';
+
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'username' => ['required', 'string', 'max:50'],
             'password' => ['required', 'string'],
         ];
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Urutan pemeriksaan: kata sandi dulu, status akun sesudahnya. Dengan begitu
+     * status "nonaktif" tidak bisa diketahui orang yang tidak memegang kata sandi.
      *
      * @throws ValidationException
      */
@@ -42,20 +46,50 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $username = (string) $this->string('username');
+        $password = (string) $this->string('password');
+        $user = User::query()->where('username', $username)->first();
+
+        $passwordBenar = Hash::check($password, $user?->password_hash ?? self::HASH_TIRUAN) && $user !== null;
+
+        if (! $passwordBenar) {
             RateLimiter::hit($this->throttleKey());
+            ActivityLogger::record(
+                'login_gagal',
+                'pengguna',
+                $user?->id_pengguna,
+                'Username atau kata sandi salah: '.$username,
+                $user?->id_pengguna
+            );
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'username' => 'Username atau kata sandi salah.',
             ]);
         }
 
+        if (! $user->is_aktif) {
+            RateLimiter::hit($this->throttleKey());
+            ActivityLogger::record(
+                'login_gagal',
+                'pengguna',
+                $user->id_pengguna,
+                'Akun nonaktif: '.$username,
+                $user->id_pengguna
+            );
+
+            throw ValidationException::withMessages([
+                'username' => 'Akun ini nonaktif. Hubungi operator aset fakultas.',
+            ]);
+        }
+
+        Auth::login($user, $this->boolean('remember'));
+
         RateLimiter::clear($this->throttleKey());
+
+        ActivityLogger::record('login', 'pengguna', $user->id_pengguna, null, $user->id_pengguna);
     }
 
     /**
-     * Ensure the login request is not rate limited.
-     *
      * @throws ValidationException
      */
     public function ensureIsNotRateLimited(): void
@@ -69,18 +103,12 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'username' => 'Terlalu banyak percobaan masuk. Coba lagi dalam '.$seconds.' detik.',
         ]);
     }
 
-    /**
-     * Get the rate limiting throttle key for the request.
-     */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('username')).'|'.$this->ip());
     }
 }

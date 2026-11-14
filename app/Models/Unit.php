@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Unit extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'unit';
     protected $primaryKey = 'id_unit';
 

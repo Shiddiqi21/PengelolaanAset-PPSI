@@ -12,16 +12,22 @@ return new class extends Migration
             $table->id('id_dokumen');
             $table->unsignedBigInteger('id_pengajuan')->nullable();
             $table->unsignedBigInteger('id_aset')->nullable();
-            $table->string('jenis_dokumen', 50); // 'bast', 'surat_pengajuan', 'surat_persetujuan', dll
-            $table->string('nama_file', 255);
-            $table->string('path', 255);
-            $table->unsignedBigInteger('diunggah_oleh');
+            $table->unsignedBigInteger('id_pengunggah');
+            // Nilai ENUM belum tercantum di ERD. Daftar ini menunggu konfirmasi.
+            $table->enum('jenis_dokumen', [
+                'bast',
+                'surat_pengajuan',
+                'surat_persetujuan',
+                'foto',
+                'lainnya',
+            ]);
+            $table->string('nama_file', 150);
+            $table->string('path_file', 255);
             $table->dateTime('tanggal_unggah');
-            $table->timestamps();
 
-            $table->foreign('id_pengajuan')->references('id_pengajuan')->on('pengajuan')->nullOnDelete();
-            $table->foreign('id_aset')->references('id_aset')->on('aset')->nullOnDelete();
-            $table->foreign('diunggah_oleh')->references('id_pengguna')->on('pengguna');
+            $table->foreign('id_pengajuan')->references('id_pengajuan')->on('pengajuan');
+            $table->foreign('id_aset')->references('id_aset')->on('aset');
+            $table->foreign('id_pengunggah')->references('id_pengguna')->on('pengguna');
         });
     }
 

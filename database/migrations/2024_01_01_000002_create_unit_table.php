@@ -12,16 +12,15 @@ return new class extends Migration
             $table->increments('id_unit');
             $table->string('nama_unit', 100);
             $table->string('jenis_unit', 30);
-            $table->timestamps();
         });
 
         Schema::create('sub_unit', function (Blueprint $table) {
             $table->increments('id_sub_unit');
             $table->unsignedInteger('id_unit');
             $table->string('nama_sub_unit', 100);
-            $table->timestamps();
+            $table->string('jenis_sub_unit', 30);
 
-            $table->foreign('id_unit')->references('id_unit')->on('unit')->onDelete('cascade');
+            $table->foreign('id_unit')->references('id_unit')->on('unit');
         });
     }
 

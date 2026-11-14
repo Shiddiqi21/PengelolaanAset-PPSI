@@ -6,22 +6,29 @@ use Illuminate\Database\Eloquent\Model;
 
 class Pengajuan extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'pengajuan';
+
     protected $primaryKey = 'id_pengajuan';
 
     protected $fillable = [
-        'id_pengguna', 'tipe_pengajuan', 'tanggal_pengajuan',
-        'status', 'keterangan', 'nomor_pengajuan',
+        'id_pemohon',
+        'nomor_pengajuan',
+        'jenis_pengajuan',
+        'tanggal_pengajuan',
+        'keterangan',
+        'status',
     ];
 
     protected function casts(): array
     {
-        return ['tanggal_pengajuan' => 'date'];
+        return ['tanggal_pengajuan' => 'datetime'];
     }
 
-    public function pengguna()
+    public function pemohon()
     {
-        return $this->belongsTo(User::class, 'id_pengguna', 'id_pengguna');
+        return $this->belongsTo(User::class, 'id_pemohon', 'id_pengguna');
     }
 
     public function riwayatStatus()
@@ -57,5 +64,10 @@ class Pengajuan extends Model
     public function dokumen()
     {
         return $this->hasMany(Dokumen::class, 'id_pengajuan', 'id_pengajuan');
+    }
+
+    public function beritaAcara()
+    {
+        return $this->hasMany(BeritaAcara::class, 'id_pengajuan', 'id_pengajuan');
     }
 }

@@ -6,12 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Dokumen extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'dokumen';
+
     protected $primaryKey = 'id_dokumen';
 
     protected $fillable = [
-        'id_pengajuan', 'id_aset', 'jenis_dokumen',
-        'nama_file', 'path', 'diunggah_oleh', 'tanggal_unggah',
+        'id_pengajuan',
+        'id_aset',
+        'id_pengunggah',
+        'jenis_dokumen',
+        'nama_file',
+        'path_file',
+        'tanggal_unggah',
     ];
 
     protected function casts(): array
@@ -31,6 +39,11 @@ class Dokumen extends Model
 
     public function pengunggah()
     {
-        return $this->belongsTo(User::class, 'diunggah_oleh', 'id_pengguna');
+        return $this->belongsTo(User::class, 'id_pengunggah', 'id_pengguna');
+    }
+
+    public function beritaAcara()
+    {
+        return $this->hasOne(BeritaAcara::class, 'id_dokumen', 'id_dokumen');
     }
 }

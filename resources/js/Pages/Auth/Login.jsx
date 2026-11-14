@@ -1,17 +1,19 @@
+import ApplicationLogo from '@/Components/ApplicationLogo';
 import Checkbox from '@/Components/Checkbox';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
+import Alert from '@/Components/ui/Alert';
+import FloatingInput from '@/Components/ui/FloatingInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
-export default function Login({ status, canResetPassword }) {
+export default function Login({ status }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
+        username: '',
         password: '',
         remember: false,
     });
+    const [bantuanTerbuka, setBantuanTerbuka] = useState(false);
 
     const submit = (e) => {
         e.preventDefault();
@@ -23,78 +25,87 @@ export default function Login({ status, canResetPassword }) {
 
     return (
         <GuestLayout>
-            <Head title="Log in" />
+            <Head title="Masuk" />
 
-            {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
+            <div className="flex items-center gap-3">
+                <ApplicationLogo className="h-10 w-10 text-brand-600" />
+                <span className="text-2xl font-bold tracking-tight text-ink-900">SIM Aset FTI</span>
+            </div>
 
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
+            <h2 className="mt-10 text-3xl font-bold tracking-tight text-ink-900">Selamat datang kembali</h2>
+            <p className="mt-2 text-[15px] text-ink-600">
+                Masuk dengan akun institusi untuk mengakses layanan pengelolaan aset.
+            </p>
 
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        isFocused={true}
-                        onChange={(e) => setData('email', e.target.value)}
-                    />
+            {status && <Alert nada="sukses" className="mt-5">{status}</Alert>}
 
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
+            <form onSubmit={submit} className="mt-8 space-y-4">
+                <FloatingInput
+                    id="username"
+                    name="username"
+                    label="Nama pengguna"
+                    wajib
+                    value={data.username}
+                    error={errors.username}
+                    autoComplete="username"
+                    autoFocus
+                    onChange={(e) => setData('username', e.target.value)}
+                />
 
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
+                <FloatingInput
+                    id="password"
+                    name="password"
+                    type="password"
+                    label="Kata sandi"
+                    wajib
+                    value={data.password}
+                    error={errors.password}
+                    autoComplete="current-password"
+                    onChange={(e) => setData('password', e.target.value)}
+                />
 
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="current-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4 block">
+                <div className="flex items-center justify-between gap-4">
                     <label className="flex items-center">
                         <Checkbox
                             name="remember"
                             checked={data.remember}
-                            onChange={(e) =>
-                                setData('remember', e.target.checked)
-                            }
+                            onChange={(e) => setData('remember', e.target.checked)}
                         />
-                        <span className="ms-2 text-sm text-gray-600">
-                            Remember me
-                        </span>
+                        <span className="ms-2 text-sm text-ink-600">Ingat perangkat ini</span>
                     </label>
+
+                    <button
+                        type="button"
+                        onClick={() => setBantuanTerbuka((terbuka) => !terbuka)}
+                        aria-expanded={bantuanTerbuka}
+                        aria-controls="bantuan-sandi"
+                        className="text-sm font-medium text-brand-600 hover:underline"
+                    >
+                        Lupa kata sandi?
+                    </button>
                 </div>
 
-                <div className="mt-4 flex items-center justify-end">
-                    {canResetPassword && (
-                        <Link
-                            href={route('password.request')}
-                            className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                        >
-                            Forgot your password?
-                        </Link>
-                    )}
+                {bantuanTerbuka && (
+                    <Alert nada="peringatan" className="" >
+                        <span id="bantuan-sandi">
+                            Hubungi administrator aset fakultas melalui kantor FTI untuk mereset kata sandi Anda.
+                        </span>
+                    </Alert>
+                )}
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Log in
-                    </PrimaryButton>
-                </div>
+                <PrimaryButton className="w-full py-3.5 text-[15px]" disabled={processing}>
+                    Masuk ke sistem
+                </PrimaryButton>
             </form>
+
+            <Alert nada="info" className="mt-8 leading-relaxed">
+                Menu ditampilkan sesuai hak akses akun. Akun dengan beberapa peran dapat mengakses kelompok menu setiap
+                peran yang diberikan.
+            </Alert>
+
+            <p className="mt-6 text-sm text-ink-600">
+                Butuh bantuan akses? Hubungi administrator aset fakultas melalui kantor FTI.
+            </p>
         </GuestLayout>
     );
 }

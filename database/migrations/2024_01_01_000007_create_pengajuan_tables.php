@@ -10,26 +10,34 @@ return new class extends Migration
     {
         Schema::create('pengajuan', function (Blueprint $table) {
             $table->id('id_pengajuan');
-            $table->unsignedBigInteger('id_pengguna');
-            $table->enum('tipe_pengajuan', ['pengadaan', 'perbaikan', 'mutasi', 'penghapusan']);
-            $table->date('tanggal_pengajuan');
-            $table->enum('status', ['draft', 'diajukan', 'disetujui_kadep', 'disetujui_pimpinan', 'diproses', 'selesai', 'ditolak'])->default('draft');
+            $table->unsignedBigInteger('id_pemohon');
+            $table->string('nomor_pengajuan', 30)->unique();
+            // Nilai ENUM belum tercantum di ERD. Daftar ini menunggu konfirmasi.
+            $table->enum('jenis_pengajuan', ['pengadaan', 'perbaikan', 'mutasi', 'penghapusan']);
+            $table->dateTime('tanggal_pengajuan');
             $table->text('keterangan')->nullable();
-            $table->string('nomor_pengajuan', 50)->unique()->nullable();
-            $table->timestamps();
+            $table->enum('status', [
+                'draft',
+                'diajukan',
+                'disetujui_kadep',
+                'disetujui_pimpinan',
+                'diproses',
+                'selesai',
+                'ditolak',
+            ]);
 
-            $table->foreign('id_pengguna')->references('id_pengguna')->on('pengguna');
+            $table->foreign('id_pemohon')->references('id_pengguna')->on('pengguna');
         });
 
         Schema::create('riwayat_status_pengajuan', function (Blueprint $table) {
             $table->id('id_riwayat_status');
             $table->unsignedBigInteger('id_pengajuan');
             $table->unsignedBigInteger('id_pengguna');
-            $table->string('status_baru', 30);
+            $table->string('status_baru', 20);
             $table->text('catatan')->nullable();
             $table->dateTime('waktu');
 
-            $table->foreign('id_pengajuan')->references('id_pengajuan')->on('pengajuan')->onDelete('cascade');
+            $table->foreign('id_pengajuan')->references('id_pengajuan')->on('pengajuan');
             $table->foreign('id_pengguna')->references('id_pengguna')->on('pengguna');
         });
     }

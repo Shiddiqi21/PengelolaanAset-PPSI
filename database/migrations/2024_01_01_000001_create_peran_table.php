@@ -12,7 +12,6 @@ return new class extends Migration
             $table->increments('id_peran');
             $table->string('nama_peran', 50)->unique();
             $table->string('deskripsi', 200)->nullable();
-            $table->timestamps();
         });
     }
 

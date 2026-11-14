@@ -6,10 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class SubUnit extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'sub_unit';
+
     protected $primaryKey = 'id_sub_unit';
 
-    protected $fillable = ['id_unit', 'nama_sub_unit'];
+    protected $fillable = ['id_unit', 'nama_sub_unit', 'jenis_sub_unit'];
 
     public function unit()
     {
@@ -19,5 +22,10 @@ class SubUnit extends Model
     public function pengguna()
     {
         return $this->hasMany(User::class, 'id_sub_unit', 'id_sub_unit');
+    }
+
+    public function ruangan()
+    {
+        return $this->hasMany(Ruangan::class, 'id_sub_unit', 'id_sub_unit');
     }
 }

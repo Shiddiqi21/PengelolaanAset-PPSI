@@ -1,38 +1,44 @@
+import Card from '@/Components/ui/Card';
+import PageHeader from '@/Components/ui/PageHeader';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
-import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 
-export default function Edit({ mustVerifyEmail, status }) {
+export default function Edit({ akun }) {
+    const rincian = [
+        ['Username', akun.username],
+        ['NIP', akun.nip],
+        ['Peran', akun.peran],
+        ['Unit', akun.unit],
+        ['Sub unit', akun.sub_unit],
+    ];
+
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Profile
-                </h2>
-            }
-        >
-            <Head title="Profile" />
+        <AuthenticatedLayout>
+            <Head title="Profil saya" />
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <UpdateProfileInformationForm
-                            mustVerifyEmail={mustVerifyEmail}
-                            status={status}
-                            className="max-w-xl"
-                        />
-                    </div>
+            <PageHeader breadcrumb={['FTI', 'Profil saya']} judul="Profil saya" />
 
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <UpdatePasswordForm className="max-w-xl" />
-                    </div>
+            <div className="space-y-6">
+                <Card judul="Data akun" deskripsi="Username, peran, dan unit diatur oleh operator aset fakultas.">
+                    <dl className="grid grid-cols-1 gap-x-6 gap-y-4 px-5 py-4 sm:grid-cols-2">
+                        {rincian.map(([label, nilai]) => (
+                            <div key={label}>
+                                <dt className="text-sm text-ink-600">{label}</dt>
+                                <dd className="mt-0.5 text-sm font-medium text-ink-900">{nilai || '-'}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                </Card>
 
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <DeleteUserForm className="max-w-xl" />
-                    </div>
-                </div>
+                <Card>
+                    <UpdateProfileInformationForm className="max-w-xl p-5" />
+                </Card>
+
+                <Card>
+                    <UpdatePasswordForm className="max-w-xl p-5" />
+                </Card>
             </div>
         </AuthenticatedLayout>
     );

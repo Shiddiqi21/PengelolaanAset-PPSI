@@ -1,176 +1,178 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
-import NavLink from '@/Components/NavLink';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
+import FlashMessage from '@/Components/ui/FlashMessage';
+import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
-
-    const [showingNavigationDropdown, setShowingNavigationDropdown] =
-        useState(false);
+/**
+ * Layout utama setelah login: sidebar putih (menu per peran dari server) + bilah atas + area isi.
+ *
+ * Cara pakai di halaman:
+ *   <AuthenticatedLayout>
+ *       <Head title="Judul" />
+ *       <PageHeader breadcrumb={['FTI', 'Judul']} judul="Judul" />
+ *       ...isi halaman...
+ *   </AuthenticatedLayout>
+ *
+ * Menu ditentukan di app/Support/MenuPeran.php, bukan di file ini.
+ */
+export default function AuthenticatedLayout({ children }) {
+    const [menuTerbuka, setMenuTerbuka] = useState(false);
+    const { auth, tanggal, peranAktif } = usePage().props;
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="border-b border-gray-100 bg-white">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 justify-between">
-                        <div className="flex">
-                            <div className="flex shrink-0 items-center">
-                                <Link href="/">
-                                    <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
-                                </Link>
-                            </div>
+        <div className="min-h-screen bg-surface">
+            {/* Sidebar tetap untuk layar lebar */}
+            <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-[246px]">
+                <Sidebar />
+            </div>
 
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
-                                >
-                                    Dashboard
-                                </NavLink>
-                            </div>
-                        </div>
+            {/* Laci menu untuk layar kecil */}
+            <Transition show={menuTerbuka}>
+                <Dialog className="relative z-50 lg:hidden" onClose={setMenuTerbuka}>
+                    <TransitionChild
+                        enter="transition-opacity duration-200"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="transition-opacity duration-150"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-ink-900/50" aria-hidden="true" />
+                    </TransitionChild>
+                    <TransitionChild
+                        enter="transition duration-200"
+                        enterFrom="-translate-x-full"
+                        enterTo="translate-x-0"
+                        leave="transition duration-150"
+                        leaveFrom="translate-x-0"
+                        leaveTo="-translate-x-full"
+                    >
+                        <DialogPanel className="fixed inset-y-0 left-0 flex w-[270px] max-w-[85vw]">
+                            <Sidebar onPilih={() => setMenuTerbuka(false)} />
+                        </DialogPanel>
+                    </TransitionChild>
+                </Dialog>
+            </Transition>
 
-                        <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div className="relative ms-3">
-                                <Dropdown>
-                                    <Dropdown.Trigger>
-                                        <span className="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {user.name}
+            <div className="lg:pl-[246px]">
+                <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-line bg-white px-4 sm:px-8">
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setMenuTerbuka(true)}
+                            className="-ml-2 rounded-lg p-2 text-ink-600 hover:bg-surface lg:hidden"
+                        >
+                            <span className="sr-only">Buka menu</span>
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <p className="text-sm text-ink-600">
+                            <span>Portal aset</span>
+                            {peranAktif && (
+                                <>
+                                    <span className="mx-2 text-ink-400">/</span>
+                                    <span>{peranAktif}</span>
+                                </>
+                            )}
+                        </p>
+                    </div>
 
-                                                <svg
-                                                    className="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </Dropdown.Trigger>
-
-                                    <Dropdown.Content>
-                                        <Dropdown.Link
-                                            href={route('profile.edit')}
-                                        >
-                                            Profile
-                                        </Dropdown.Link>
-                                        <Dropdown.Link
-                                            href={route('logout')}
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <div className="-me-2 flex items-center sm:hidden">
-                            <button
-                                onClick={() =>
-                                    setShowingNavigationDropdown(
-                                        (previousState) => !previousState,
-                                    )
-                                }
-                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
-                            >
-                                <svg
-                                    className="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        className={
-                                            !showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
-                                        }
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        className={
-                                            showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
-                                        }
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
+                    <Dropdown>
+                        <Dropdown.Trigger>
+                            <button type="button" className="flex items-center gap-2 rounded-lg px-2 py-1 text-right hover:bg-surface">
+                                <span className="block">
+                                    <span className="block text-sm font-semibold text-ink-900">{auth.user.nama_lengkap}</span>
+                                    <span className="block text-xs text-ink-500">
+                                        {auth.user.peran_label} • {tanggal}
+                                    </span>
+                                </span>
+                                <svg className="h-4 w-4 text-ink-500" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                                    <path d="m5.5 8 4.5 4.5L14.5 8" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </button>
-                        </div>
+                        </Dropdown.Trigger>
+                        <Dropdown.Content>
+                            <Dropdown.Link href={route('profile.edit')}>Profil saya</Dropdown.Link>
+                            <Dropdown.Link href={route('logout')} method="post" as="button">
+                                Keluar dari akun
+                            </Dropdown.Link>
+                        </Dropdown.Content>
+                    </Dropdown>
+                </header>
+
+                <main className="px-4 py-8 sm:px-8">
+                    <div className="mx-auto max-w-[1194px]">
+                        <FlashMessage />
+                        {children}
+                        <footer className="mt-10 text-xs text-ink-500">© 2026 • FTI Universitas Andalas</footer>
+                    </div>
+                </main>
+            </div>
+        </div>
+    );
+}
+
+function Sidebar({ onPilih }) {
+    const { menu = [] } = usePage().props;
+
+    return (
+        <div className="flex w-full flex-col border-r border-line bg-white">
+            <div className="px-[22px] pb-1 pt-7">
+                <div className="flex items-center gap-2.5">
+                    <ApplicationLogo className="h-8 w-8 shrink-0 text-brand-600" />
+                    <div>
+                        <p className="text-xl font-bold leading-none tracking-tight text-brand-600">SIM ASET FTI</p>
+                        <p className="mt-1 text-[10px] uppercase tracking-wide text-ink-500">Universitas Andalas</p>
                     </div>
                 </div>
+            </div>
 
-                <div
-                    className={
-                        (showingNavigationDropdown ? 'block' : 'hidden') +
-                        ' sm:hidden'
-                    }
-                >
-                    <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            href={route('dashboard')}
-                            active={route().current('dashboard')}
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
+            <div className="px-[22px] pt-6">
+                <p className="text-[11px] uppercase tracking-wide text-ink-500">Unit kerja</p>
+                <p className="mt-1 text-sm font-semibold text-ink-900">Fakultas Teknologi Informasi</p>
+                <p className="mt-0.5 text-xs text-ink-500">Kampus Limau Manis, Padang</p>
+            </div>
+
+            <nav aria-label="Menu utama" className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
+                {menu.map((kelompok) => (
+                    <div key={kelompok.peran}>
+                        <p className="px-[10px] pb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-600">
+                            {kelompok.peran.replace('/', ' / ')}
+                        </p>
+                        <ul className="space-y-0.5">
+                            {kelompok.item.map((item) => (
+                                <li key={item.href}>
+                                    <Link
+                                        href={item.href}
+                                        onClick={onPilih}
+                                        aria-current={item.aktif ? 'page' : undefined}
+                                        className={`block rounded-lg px-[10px] py-2 text-sm transition ${
+                                            item.aktif
+                                                ? 'bg-brand-50 font-semibold text-brand-600'
+                                                : 'text-ink-600 hover:bg-surface hover:text-ink-900'
+                                        }`}
+                                    >
+                                        {item.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
-
-                    <div className="border-t border-gray-200 pb-1 pt-4">
-                        <div className="px-4">
-                            <div className="text-base font-medium text-gray-800">
-                                {user.name}
-                            </div>
-                            <div className="text-sm font-medium text-gray-500">
-                                {user.email}
-                            </div>
-                        </div>
-
-                        <div className="mt-3 space-y-1">
-                            <ResponsiveNavLink href={route('profile.edit')}>
-                                Profile
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                method="post"
-                                href={route('logout')}
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
-                        </div>
-                    </div>
-                </div>
+                ))}
             </nav>
 
-            {header && (
-                <header className="bg-white shadow">
-                    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                        {header}
-                    </div>
-                </header>
-            )}
-
-            <main>{children}</main>
+            <div className="space-y-2 border-t border-line px-[22px] py-5 text-sm">
+                <Link href={route('panduan')} onClick={onPilih} className="block text-ink-600 hover:text-ink-900">
+                    Panduan penggunaan
+                </Link>
+                <Link href={route('logout')} method="post" as="button" className="block text-ink-600 hover:text-ink-900">
+                    Keluar dari akun
+                </Link>
+                <p className="pt-1 text-[11px] text-ink-500">SIM Aset FTI • Versi 1.0</p>
+            </div>
         </div>
     );
 }

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ItemMutasi extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'item_mutasi';
     protected $primaryKey = 'id_item_mutasi';
 
@@ -31,5 +33,10 @@ class ItemMutasi extends Model
     public function penanggungJawabBaru()
     {
         return $this->belongsTo(User::class, 'id_pengguna_pj', 'id_pengguna');
+    }
+
+    public function penempatan()
+    {
+        return $this->hasOne(PenempatanAset::class, 'id_item_mutasi', 'id_item_mutasi');
     }
 }

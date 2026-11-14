@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PenerimaanAset extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'penerimaan_aset';
     protected $primaryKey = 'id_penerimaan';
 
@@ -37,5 +39,10 @@ class PenerimaanAset extends Model
     public function itemPenerimaan()
     {
         return $this->hasMany(ItemPenerimaan::class, 'id_penerimaan', 'id_penerimaan');
+    }
+
+    public function beritaAcara()
+    {
+        return $this->hasMany(BeritaAcara::class, 'id_penerimaan', 'id_penerimaan');
     }
 }

@@ -6,14 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 
 class Aset extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'aset';
+
     protected $primaryKey = 'id_aset';
 
     protected $fillable = [
-        'id_kategori', 'id_item_penerimaan', 'kode_aset', 'nama_barang',
-        'merek_tipe', 'nomor_seri', 'spesifikasi', 'foto_path',
-        'tahun_perolehan', 'harga_perolehan', 'kondisi', 'status_aset',
-        'id_ruangan', 'id_pengguna_pj',
+        'id_kategori',
+        'id_item_penerimaan',
+        'kode_aset',
+        'nama_barang',
+        'merek_tipe',
+        'nomor_seri',
+        'spesifikasi',
+        'foto_path',
+        'tahun_perolehan',
+        'harga_perolehan',
+        'kondisi',
+        'status_aset',
     ];
 
     protected function casts(): array
@@ -29,19 +40,14 @@ class Aset extends Model
         return $this->belongsTo(KategoriAset::class, 'id_kategori', 'id_kategori');
     }
 
-    public function ruangan()
-    {
-        return $this->belongsTo(Ruangan::class, 'id_ruangan', 'id_ruangan');
-    }
-
-    public function penanggungjawab()
-    {
-        return $this->belongsTo(User::class, 'id_pengguna_pj', 'id_pengguna');
-    }
-
     public function itemPenerimaan()
     {
         return $this->belongsTo(ItemPenerimaan::class, 'id_item_penerimaan', 'id_item_penerimaan');
+    }
+
+    public function penempatan()
+    {
+        return $this->hasMany(PenempatanAset::class, 'id_aset', 'id_aset');
     }
 
     public function perbaikan()

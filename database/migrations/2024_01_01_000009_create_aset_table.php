@@ -20,17 +20,12 @@ return new class extends Migration
             $table->string('foto_path', 255)->nullable();
             $table->smallInteger('tahun_perolehan')->nullable();
             $table->decimal('harga_perolehan', 15, 2)->nullable();
-            $table->enum('kondisi', ['baik', 'kurang_baik', 'rusak_berat'])->default('baik');
-            $table->enum('status_aset', ['aktif', 'dalam_perbaikan', 'dihapus', 'dimutasi'])->default('aktif');
-            // Lokasi penempatan saat ini
-            $table->unsignedInteger('id_ruangan')->nullable();
-            $table->unsignedBigInteger('id_pengguna_pj')->nullable(); // penanggungjawab
-            $table->timestamps();
+            // Nilai ENUM belum tercantum di ERD. Daftar ini menunggu konfirmasi.
+            $table->enum('kondisi', ['baik', 'kurang_baik', 'rusak_berat']);
+            $table->enum('status_aset', ['aktif', 'dalam_perbaikan', 'dihapus', 'dimutasi']);
 
             $table->foreign('id_kategori')->references('id_kategori')->on('kategori_aset');
-            $table->foreign('id_item_penerimaan')->references('id_item_penerimaan')->on('item_penerimaan')->nullOnDelete();
-            $table->foreign('id_ruangan')->references('id_ruangan')->on('ruangan')->nullOnDelete();
-            $table->foreign('id_pengguna_pj')->references('id_pengguna')->on('pengguna')->nullOnDelete();
+            $table->foreign('id_item_penerimaan')->references('id_item_penerimaan')->on('item_penerimaan');
         });
     }
 

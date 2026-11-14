@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ItemPengadaan extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'item_pengadaan';
     protected $primaryKey = 'id_item_pengadaan';
 
@@ -13,6 +15,14 @@ class ItemPengadaan extends Model
         'id_pengajuan', 'id_kategori', 'nama_barang',
         'spesifikasi', 'jumlah', 'estimasi_anggaran',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'jumlah' => 'integer',
+            'estimasi_anggaran' => 'decimal:2',
+        ];
+    }
 
     public function pengajuan()
     {

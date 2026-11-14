@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('log_aktivitas', function (Blueprint $table) {
             $table->id('id_log');
+            // ERD menandai kolom ini wajib. Dibuat nullable agar gagal login
+            // untuk username yang tidak dikenal tetap bisa dicatat.
             $table->unsignedBigInteger('id_pengguna')->nullable();
             $table->dateTime('waktu');
             $table->string('aksi', 30);
