@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Peran;
+use App\Models\User;
 use App\Support\MenuPeran;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -15,6 +16,8 @@ class HakAksesController extends Controller
 {
     public function index(): Response
     {
+        $this->authorize('viewAny', User::class);
+
         $peran = Peran::query()
             ->withCount([
                 'semuaPengguna as akun_total',

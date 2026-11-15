@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('berita_acara', function (Blueprint $table) {
             $table->id('id_bast');
             $table->unsignedBigInteger('id_pengajuan');
-            $table->unsignedBigInteger('id_penerimaan');
+            $table->unsignedBigInteger('id_penerimaan')->nullable();
             $table->unsignedBigInteger('id_dokumen')->unique();
             $table->string('nomor_bast', 50)->unique();
             // Nilai ENUM belum tercantum di ERD. Daftar ini menunggu konfirmasi.
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('pihak_kedua', 150);
 
             $table->foreign('id_pengajuan')->references('id_pengajuan')->on('pengajuan');
-            $table->foreign('id_penerimaan')->references('id_penerimaan')->on('penerimaan_aset');
+            $table->foreign('id_penerimaan')->references('id_penerimaan')->on('penerimaan_aset')->nullOnDelete();
             $table->foreign('id_dokumen')->references('id_dokumen')->on('dokumen');
         });
     }

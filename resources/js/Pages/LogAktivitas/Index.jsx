@@ -22,6 +22,7 @@ const AKSI = {
     hapus: ['Hapus', 'bahaya'],
     reset_password: ['Reset sandi', 'peringatan'],
     ubah_password: ['Ubah sandi', 'peringatan'],
+    ubah_peran: ['Ubah peran', 'info'],
 };
 
 const labelAksi = (aksi) => AKSI[aksi]?.[0] ?? aksi;
