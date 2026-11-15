@@ -189,6 +189,7 @@ class PengajuanApprovalTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Pengajuan/PemeriksaanIndex')
                 ->has('daftarPemeriksaan.data')
+                ->has('daftarPemeriksaan.data.0.riwayat')
             );
     }
 

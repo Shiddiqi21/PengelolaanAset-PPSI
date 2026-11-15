@@ -140,7 +140,7 @@ class PengajuanController extends Controller
         }
 
         $query = Pengajuan::query()
-            ->with(['pemohon.unit', 'itemPengadaan', 'itemPerbaikan', 'itemMutasi', 'itemPenghapusan', 'dokumen', 'riwayatStatus'])
+            ->with(['pemohon.unit', 'itemPengadaan', 'itemPerbaikan', 'itemMutasi', 'itemPenghapusan', 'dokumen', 'riwayatStatus.pengguna.peran'])
             ->where('status', '!=', 'draft')
             ->orderByDesc('tanggal_pengajuan');
 
@@ -182,6 +182,18 @@ class PengajuanController extends Controller
             $bisaDiperiksa = $p->status === 'diajukan' && ! $sudahDiperiksaOperator;
             $catatanOperator = $p->riwayatStatus->filter(fn ($r) => str_contains($r->catatan ?? '', 'Pemeriksaan Operator:'))->sortByDesc('id_riwayat_status')->first()?->catatan;
 
+            $riwayat = $p->riwayatStatus
+                ->sortByDesc('waktu')
+                ->values()
+                ->map(fn ($r) => [
+                    'id_riwayat_status' => $r->id_riwayat_status,
+                    'status_baru' => $r->status_baru,
+                    'catatan' => $r->catatan,
+                    'waktu' => $r->waktu?->format('d M Y, H:i') ?? '-',
+                    'pengguna_nama' => $r->pengguna?->nama_lengkap ?? 'Sistem',
+                    'pengguna_peran' => $r->pengguna?->peran?->nama_peran ?? '-',
+                ]);
+
             return [
                 'id_pengajuan' => $p->id_pengajuan,
                 'nomor_pengajuan' => $p->nomor_pengajuan,
@@ -200,6 +212,7 @@ class PengajuanController extends Controller
                     'nama_file' => $d->nama_file,
                     'url' => route('dokumen.unduh', $d->id_dokumen),
                 ])->values(),
+                'riwayat' => $riwayat,
                 'status' => $p->status,
                 'status_label' => $meta['label'],
                 'status_nada' => $meta['nada'],

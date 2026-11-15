@@ -13,6 +13,7 @@ import Pagination from '@/Components/ui/Pagination';
 import SearchInput from '@/Components/ui/SearchInput';
 import SelectInput from '@/Components/ui/SelectInput';
 import TabNav from '@/Components/ui/TabNav';
+import Timeline from '@/Components/ui/Timeline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
@@ -33,6 +34,17 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
     const [modalBuka, setModalBuka] = useState(false);
     const [targetPengajuan, setTargetPengajuan] = useState(null);
     const isFirstRender = useRef(true);
+
+    const timelineItems = (targetPengajuan?.riwayat || []).map((r) => {
+        const isSelesai = ['disetujui_pimpinan', 'selesai', 'disetujui_kadep'].includes(r.status_baru);
+
+        return {
+            ikon: isSelesai ? 'selesai' : 'jadwal',
+            judul: `${r.pengguna_nama} (${r.pengguna_peran})`,
+            detail: r.catatan,
+            waktu: r.waktu,
+        };
+    });
 
     const formPemeriksaan = useForm({
         keputusan: 'teruskan',
@@ -331,6 +343,20 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
                                             </li>
                                         ))}
                                     </ul>
+                                )}
+                            </div>
+
+                            {/* Riwayat Proses */}
+                            <div className="rounded-lg border border-line p-3">
+                                <p className="mb-2 text-xs font-semibold text-ink-600">
+                                    Riwayat Proses Penanganan:
+                                </p>
+                                {timelineItems.length === 0 ? (
+                                    <p className="text-xs text-ink-400">Belum ada riwayat proses tercatat.</p>
+                                ) : (
+                                    <div className="max-h-56 overflow-y-auto pr-1">
+                                        <Timeline item={timelineItems} />
+                                    </div>
                                 )}
                             </div>
 

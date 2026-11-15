@@ -1,3 +1,4 @@
+import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
@@ -37,7 +38,10 @@ function formatUkuranBerkas(bytes) {
 
 export default function Create({ pemohon, kategoriAset = [], ruangan = [] }) {
     const berkasInputRef = useRef(null);
+    const bannerErrorRef = useRef(null);
     const [aksiAktif, setAksiAktif] = useState(null);
+    const [modalErrorBuka, setModalErrorBuka] = useState(false);
+    const [daftarError, setDaftarError] = useState([]);
 
     const { data, setData, post, processing, errors, transform } = useForm({
         aksi: 'diajukan',
@@ -56,6 +60,62 @@ export default function Create({ pemohon, kategoriAset = [], ruangan = [] }) {
         ],
         lampiran: [],
     });
+
+    // Validasi kelengkapan data di sisi klien
+    const validasiFormulirKlien = (dataForm, tipeAksi) => {
+        const listError = [];
+
+        if (!dataForm.perihal || !dataForm.perihal.trim()) {
+            listError.push('Perihal pengadaan wajib diisi.');
+        }
+        if (!dataForm.sumber_dana || !dataForm.sumber_dana.trim()) {
+            listError.push('Sumber dana usulan wajib diisi.');
+        }
+        if (!dataForm.alasan || !dataForm.alasan.trim()) {
+            listError.push('Alasan & manfaat pengadaan wajib diisi.');
+        }
+
+        if (!dataForm.items || dataForm.items.length === 0) {
+            listError.push('Minimal harus mengusulkan 1 item barang/aset.');
+        } else {
+            dataForm.items.forEach((it, idx) => {
+                const no = idx + 1;
+                if (!it.id_kategori) {
+                    listError.push(`Item #${no}: Kategori aset wajib dipilih.`);
+                }
+                if (!it.nama_barang || !it.nama_barang.trim()) {
+                    listError.push(`Item #${no}: Nama barang wajib diisi.`);
+                }
+                if (!it.spesifikasi || !it.spesifikasi.trim()) {
+                    listError.push(`Item #${no}: Spesifikasi teknis wajib diisi.`);
+                }
+                const jumlah = parseInt(it.jumlah, 10);
+                if (isNaN(jumlah) || jumlah < 1) {
+                    listError.push(`Item #${no}: Jumlah barang minimal 1 unit.`);
+                }
+                const harga = parseFloat(it.harga_satuan);
+                if (isNaN(harga) || harga <= 0 || it.harga_satuan === '') {
+                    listError.push(`Item #${no}: Estimasi harga satuan wajib diisi berupa angka positif.`);
+                }
+            });
+        }
+
+        if (tipeAksi === 'diajukan') {
+            const jumlahLampiran = dataForm.lampiran && Array.isArray(dataForm.lampiran) ? dataForm.lampiran.length : 0;
+            if (jumlahLampiran < 1) {
+                listError.push('Minimal satu berkas lampiran permohonan/RAB wajib diunggah sebelum mengirim pengajuan.');
+            }
+        }
+
+        return listError;
+    };
+
+    const tutupModalError = () => {
+        setModalErrorBuka(false);
+        setTimeout(() => {
+            bannerErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    };
 
     // Tambah baris barang baru
     const tambahBarang = () => {
@@ -111,6 +171,17 @@ export default function Create({ pemohon, kategoriAset = [], ruangan = [] }) {
 
     // Kirim formulir dengan aksi yang ditentukan (draft atau diajukan)
     const kirimFormulir = (tipeAksi) => {
+        // Pengecekan kelengkapan di sisi klien
+        const errorKlien = validasiFormulirKlien(data, tipeAksi);
+        if (errorKlien.length > 0) {
+            setDaftarError(errorKlien);
+            setModalErrorBuka(true);
+            setTimeout(() => {
+                bannerErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+            return;
+        }
+
         setAksiAktif(tipeAksi);
         transform((dataForm) => ({
             ...dataForm,
@@ -120,6 +191,19 @@ export default function Create({ pemohon, kategoriAset = [], ruangan = [] }) {
         post(route('pemohon.pengadaan.store'), {
             forceFormData: true,
             preserveScroll: true,
+            onError: (errs) => {
+                const listError = Object.values(errs);
+                if (listError.length > 0) {
+                    setDaftarError(listError);
+                    setModalErrorBuka(true);
+                    setTimeout(() => {
+                        bannerErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                }
+            },
+            onSuccess: () => {
+                setDaftarError([]);
+            },
             onFinish: () => setAksiAktif(null),
         });
     };
@@ -163,6 +247,24 @@ export default function Create({ pemohon, kategoriAset = [], ruangan = [] }) {
                 judul="Pengajuan pengadaan"
                 deskripsi="Pengusulan kebutuhan aset baru untuk menunjang kegiatan operasional, akademik, dan laboratorium unit kerja."
             />
+
+            {/* Banner Peringatan Kesalahan Validasi */}
+            {daftarError.length > 0 && (
+                <div ref={bannerErrorRef} className="mb-6 scroll-mt-6">
+                    <Alert nada="bahaya">
+                        <div className="space-y-1.5">
+                            <p className="font-bold text-bahaya-900">
+                                Data pengajuan belum lengkap. Mohon periksa kembali isian berikut:
+                            </p>
+                            <ul className="list-disc space-y-1 pl-4 text-xs font-medium text-bahaya-800">
+                                {daftarError.map((err, idx) => (
+                                    <li key={idx}>{err}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    </Alert>
+                </div>
+            )}
 
             {/* Indikator Sub-Langkah Pengajuan */}
             <div className="mb-6 rounded-kartu border border-line bg-white p-4">
@@ -747,6 +849,46 @@ export default function Create({ pemohon, kategoriAset = [], ruangan = [] }) {
                     </Card>
                 </div>
             </div>
+
+            {/* Modal Pop-up Validasi Belum Lengkap */}
+            <Modal show={modalErrorBuka} onClose={tutupModalError} maxWidth="md">
+                <div className="p-6">
+                    <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-bahaya-100 text-bahaya-600">
+                            <svg
+                                className="h-6 w-6 stroke-[2]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 7.5h.008v.008H12v-.008z"
+                                />
+                            </svg>
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-lg font-bold text-ink-900">
+                                Data pengajuan belum lengkap
+                            </h3>
+                            <p className="mt-1 text-xs text-ink-600">
+                                Mohon lengkapi seluruh isian wajib berikut sebelum mengirimkan pengajuan:
+                            </p>
+                            <ul className="mt-3 max-h-48 list-disc space-y-1 overflow-y-auto pl-4 text-xs font-medium text-bahaya-700">
+                                {daftarError.map((err, idx) => (
+                                    <li key={idx}>{err}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                        <PrimaryButton type="button" onClick={tutupModalError}>
+                            Perbaiki isian
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
         </AuthenticatedLayout>
     );
 }
