@@ -28,7 +28,7 @@ return new class extends Migration
             $table->unsignedBigInteger('id_verifikator');
             $table->date('tanggal_terima');
             $table->string('nomor_nota', 50);
-            $table->text('catatan');
+            $table->text('catatan')->nullable();
 
             $table->foreign('id_pengajuan')->references('id_pengajuan')->on('pengajuan');
             $table->foreign('id_vendor')->references('id_vendor')->on('vendor');
