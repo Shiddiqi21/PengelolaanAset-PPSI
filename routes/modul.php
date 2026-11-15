@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ModulBelumTersediaController;
+use App\Http\Controllers\PengadaanController;
+use App\Http\Controllers\PengajuanController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,7 +27,8 @@ Route::middleware('role:operator')->group(function () use ($sementara) {
     Route::get('/operator', [DashboardController::class, 'operator'])->name('operator.dashboard');
     Route::get('/master-aset', $sementara)->defaults('judul', 'Master aset')->name('aset.index');
     Route::get('/lokasi', $sementara)->defaults('judul', 'Lokasi & penanggung jawab')->name('lokasi.index');
-    Route::get('/pemeriksaan', $sementara)->defaults('judul', 'Pemeriksaan pengajuan')->name('pemeriksaan.index');
+    Route::get('/pemeriksaan', [PengajuanController::class, 'indexOperator'])->name('pemeriksaan.index');
+    Route::post('/pemeriksaan/{pengajuan}', [PengajuanController::class, 'prosesPemeriksaanOperator'])->name('pemeriksaan.proses');
     Route::get('/penerimaan', $sementara)->defaults('judul', 'Penerimaan aset')->name('penerimaan.index');
     Route::get('/mutasi', $sementara)->defaults('judul', 'Mutasi aset')->name('mutasi.index');
     Route::get('/penghapusan', $sementara)->defaults('judul', 'Penghapusan aset')->name('penghapusan.index');
@@ -39,24 +42,33 @@ Route::middleware('role:operator')->group(function () use ($sementara) {
 
 Route::middleware('role:pimpinan')->prefix('pimpinan')->group(function () use ($sementara) {
     Route::get('/', [DashboardController::class, 'pimpinan'])->name('pimpinan.dashboard');
-    Route::get('/persetujuan', $sementara)->defaults('judul', 'Persetujuan pengajuan')->name('pimpinan.persetujuan');
+    Route::get('/persetujuan', [PengajuanController::class, 'indexPimpinan'])->name('pimpinan.persetujuan');
+    Route::get('/persetujuan/{pengajuan}', [PengajuanController::class, 'showPimpinan'])->name('pimpinan.persetujuan.show');
+    Route::post('/persetujuan/{pengajuan}', [PengajuanController::class, 'prosesPimpinan'])->name('pimpinan.persetujuan.proses');
     Route::get('/laporan', $sementara)->defaults('judul', 'Laporan aset')->name('pimpinan.laporan');
 });
 
 Route::middleware('role:kepala-kantor')->prefix('kepala-kantor')->group(function () use ($sementara) {
     Route::get('/', [DashboardController::class, 'kepalaKantor'])->name('kepala-kantor.dashboard');
-    Route::get('/pengajuan', $sementara)->defaults('judul', 'Daftar pengajuan')->name('kepala-kantor.pengajuan');
+    Route::get('/pengajuan', [PengajuanController::class, 'indexKepalaKantor'])->name('kepala-kantor.pengajuan');
+    Route::get('/pengajuan/{pengajuan}', [PengajuanController::class, 'showKepalaKantor'])->name('kepala-kantor.pengajuan.show');
+    Route::post('/pengajuan/{pengajuan}', [PengajuanController::class, 'prosesKepalaKantor'])->name('kepala-kantor.pengajuan.proses');
     Route::get('/laporan', $sementara)->defaults('judul', 'Laporan aset')->name('kepala-kantor.laporan');
 });
 
 Route::middleware('role:pemohon')->prefix('pemohon')->group(function () use ($sementara) {
     Route::get('/', [DashboardController::class, 'pemohon'])->name('pemohon.dashboard');
     Route::get('/aset-unit', $sementara)->defaults('judul', 'Daftar aset unit')->name('pemohon.aset-unit');
-    Route::get('/pengajuan/pengadaan', $sementara)->defaults('judul', 'Pengajuan pengadaan')->name('pemohon.pengadaan');
+    Route::get('/pengajuan/pengadaan', [PengadaanController::class, 'create'])->name('pemohon.pengadaan');
+    Route::post('/pengajuan/pengadaan', [PengadaanController::class, 'store'])->name('pemohon.pengadaan.store');
     Route::get('/pengajuan/perbaikan', $sementara)->defaults('judul', 'Pengajuan perbaikan')->name('pemohon.perbaikan');
     Route::get('/pengajuan/mutasi', $sementara)->defaults('judul', 'Pengajuan mutasi')->name('pemohon.mutasi');
     Route::get('/pengajuan/penghapusan', $sementara)->defaults('judul', 'Pengajuan penghapusan')->name('pemohon.penghapusan');
-    Route::get('/pengajuan', $sementara)->defaults('judul', 'Daftar pengajuan')->name('pemohon.pengajuan');
+    Route::get('/pengajuan', [PengajuanController::class, 'indexPemohon'])->name('pemohon.pengajuan');
+    Route::get('/pengajuan/{pengajuan}', [PengajuanController::class, 'showPemohon'])->name('pemohon.pengajuan.show');
+    Route::get('/pengajuan/{pengajuan}/edit', [PengadaanController::class, 'edit'])->name('pemohon.pengajuan.edit');
+    Route::match(['put', 'patch', 'post'], '/pengajuan/{pengajuan}', [PengadaanController::class, 'update'])->name('pemohon.pengajuan.update');
+    Route::post('/pengajuan/{pengajuan}/kirim', [PengajuanController::class, 'kirimDraft'])->name('pemohon.pengajuan.kirim');
     Route::get('/riwayat-perpindahan', $sementara)->defaults('judul', 'Riwayat perpindahan')->name('pemohon.riwayat-perpindahan');
 });
 
@@ -69,4 +81,8 @@ Route::middleware('role:teknisi')->prefix('teknisi')->group(function () use ($se
     Route::get('/', [DashboardController::class, 'teknisi'])->name('teknisi.dashboard');
     Route::get('/tugas', $sementara)->defaults('judul', 'Tugas perbaikan')->name('teknisi.tugas');
     Route::get('/riwayat', $sementara)->defaults('judul', 'Riwayat pekerjaan')->name('teknisi.riwayat');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/dokumen/{dokumen}/unduh', [PengajuanController::class, 'unduhDokumen'])->name('dokumen.unduh');
 });
