@@ -35,7 +35,7 @@ final class MenuPeran
             ['label' => 'Pemeliharaan', 'route' => 'pemeliharaan.index', 'cocok' => ['pemeliharaan.*']],
             ['label' => 'Cetak label aset', 'route' => 'label.index', 'cocok' => ['label.*']],
             ['label' => 'Kartu kendali ruangan', 'route' => 'kartu-kendali.index', 'cocok' => ['kartu-kendali.*']],
-            ['label' => 'Pengguna & hak akses', 'route' => 'pengguna.index', 'cocok' => ['pengguna.*', 'hak-akses.*', 'log-aktivitas.*']],
+            ['label' => 'Pengguna & hak akses', 'route' => 'pengguna.index', 'cocok' => ['pengguna.*', 'unit.*', 'hak-akses.*', 'log-aktivitas.*']],
             ['label' => 'Arsip BAST', 'route' => 'bast.index', 'cocok' => ['bast.*']],
             ['label' => 'Laporan & rekonsiliasi', 'route' => 'laporan.index', 'cocok' => ['laporan.*']],
         ],

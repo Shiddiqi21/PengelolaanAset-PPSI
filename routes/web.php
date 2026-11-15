@@ -6,6 +6,7 @@ use App\Http\Controllers\LogAktivitasController;
 use App\Http\Controllers\ModulBelumTersediaController;
 use App\Http\Controllers\PenggunaController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UnitController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,6 +29,13 @@ Route::middleware(['auth', 'aktif'])->group(function () {
         Route::put('/pengguna/{user}', [PenggunaController::class, 'update'])->name('pengguna.update');
         Route::patch('/pengguna/{user}/status', [PenggunaController::class, 'status'])->name('pengguna.status');
         Route::post('/pengguna/{user}/reset-password', [PenggunaController::class, 'resetPassword'])->name('pengguna.reset-password');
+        Route::get('/unit', [UnitController::class, 'index'])->name('unit.index');
+        Route::post('/unit', [UnitController::class, 'storeUnit'])->name('unit.store');
+        Route::put('/unit/{unit}', [UnitController::class, 'updateUnit'])->name('unit.update');
+        Route::delete('/unit/{unit}', [UnitController::class, 'destroyUnit'])->name('unit.destroy');
+        Route::post('/sub-unit', [UnitController::class, 'storeSubUnit'])->name('sub-unit.store');
+        Route::put('/sub-unit/{subUnit}', [UnitController::class, 'updateSubUnit'])->name('sub-unit.update');
+        Route::delete('/sub-unit/{subUnit}', [UnitController::class, 'destroySubUnit'])->name('sub-unit.destroy');
         Route::get('/hak-akses', [HakAksesController::class, 'index'])->name('hak-akses.index');
         Route::get('/log-aktivitas', [LogAktivitasController::class, 'index'])->name('log-aktivitas.index');
     });
