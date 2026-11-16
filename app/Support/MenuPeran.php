@@ -51,7 +51,7 @@ final class MenuPeran
         ],
         'pemohon' => [
             ['label' => 'Dashboard', 'route' => 'pemohon.dashboard', 'cocok' => ['pemohon.dashboard']],
-            ['label' => 'Daftar aset unit', 'route' => 'pemohon.aset-unit', 'cocok' => ['pemohon.aset-unit']],
+            ['label' => 'Daftar aset unit', 'route' => 'pemohon.aset-unit', 'cocok' => ['pemohon.aset-unit', 'pemohon.aset-unit.*']],
             ['label' => 'Pengajuan pengadaan', 'route' => 'pemohon.pengadaan', 'cocok' => ['pemohon.pengadaan']],
             ['label' => 'Pengajuan perbaikan', 'route' => 'pemohon.perbaikan', 'cocok' => ['pemohon.perbaikan']],
             ['label' => 'Pengajuan mutasi', 'route' => 'pemohon.mutasi', 'cocok' => ['pemohon.mutasi']],
@@ -61,7 +61,7 @@ final class MenuPeran
         ],
         'pegawai' => [
             ['label' => 'Dashboard', 'labelGanda' => 'Dashboard pribadi', 'route' => 'pegawai.dashboard', 'cocok' => ['pegawai.dashboard']],
-            ['label' => 'Aset tanggung jawab pribadi', 'route' => 'pegawai.aset', 'cocok' => ['pegawai.aset']],
+            ['label' => 'Aset tanggung jawab pribadi', 'route' => 'pegawai.aset', 'cocok' => ['pegawai.aset', 'pegawai.aset.*']],
         ],
         'teknisi' => [
             ['label' => 'Dashboard', 'route' => 'teknisi.dashboard', 'cocok' => ['teknisi.dashboard']],
