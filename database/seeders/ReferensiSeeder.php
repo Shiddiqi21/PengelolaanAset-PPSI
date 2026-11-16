@@ -19,6 +19,7 @@ class ReferensiSeeder extends Seeder
     public function run(): void
     {
         foreach ([
+            ['MSN', 'Peralatan dan mesin', 4],
             ['KMP', 'Komputer dan perangkat pengolah data', 4],
             ['JRG', 'Peralatan jaringan', 4],
             ['ELK', 'Peralatan elektronik', 4],
@@ -61,17 +62,22 @@ class ReferensiSeeder extends Seeder
         $ruangan = [];
 
         if ($fakultas && $tataUsaha) {
-            $ruangan[] = [$fakultas, $tataUsaha, 1, '101', 'Ruang Tata Usaha'];
-            $ruangan[] = [$fakultas, $tataUsaha, 2, '201', 'Ruang Pimpinan'];
+            $ruangan[] = [$fakultas, $tataUsaha, 1, '101', 'Ruang Administrasi'];
+            $ruangan[] = [$fakultas, $tataUsaha, 1, '104', 'Ruang Tata Usaha'];
+            $ruangan[] = [$fakultas, $tataUsaha, 1, '105', 'Gudang Aset'];
+            $ruangan[] = [$fakultas, $tataUsaha, 2, '204', 'Ruang Pimpinan'];
         }
 
         if ($departemen && $lab) {
-            $ruangan[] = [$departemen, $lab, 1, '102', 'Lab Jaringan'];
+            $ruangan[] = [$departemen, $lab, 2, '201', 'Lab. Sistem Informasi'];
+            $ruangan[] = [$departemen, $lab, 2, '202', 'Lab. Jaringan'];
+            $ruangan[] = [$departemen, $lab, 2, '203', 'Lab. Multimedia'];
+            $ruangan[] = [$departemen, $lab, 1, '102', 'Ruang Dosen SI'];
             $ruangan[] = [$departemen, $lab, 1, '103', 'Ruang Kuliah 1'];
         }
 
         foreach ($ruangan as [$unit, $subUnit, $lantai, $nomor, $nama]) {
-            Ruangan::query()->firstOrCreate(
+            Ruangan::query()->updateOrCreate(
                 ['id_gedung' => $gedung->id_gedung, 'nomor_ruangan' => $nomor],
                 [
                     'id_unit' => $unit->id_unit,
