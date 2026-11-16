@@ -23,6 +23,13 @@ const AKSI = {
     reset_password: ['Reset sandi', 'peringatan'],
     ubah_password: ['Ubah sandi', 'peringatan'],
     ubah_peran: ['Ubah peran', 'info'],
+    kirim: ['Kirim pengajuan', 'info'],
+    verifikasi: ['Verifikasi', 'info'],
+    rekomendasi: ['Rekomendasi', 'info'],
+    persetujuan: ['Persetujuan', 'sukses'],
+    penolakan: ['Penolakan', 'bahaya'],
+    kembalikan: ['Kembalikan revisi', 'peringatan'],
+    ubah_status: ['Ubah status', 'info'],
 };
 
 const labelAksi = (aksi) => AKSI[aksi]?.[0] ?? aksi;
