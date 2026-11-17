@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ModulBelumTersediaController;
+use App\Http\Controllers\PemeliharaanController;
 use App\Http\Controllers\PengadaanController;
 use App\Http\Controllers\PengajuanController;
+use App\Http\Controllers\PerbaikanController;
+use App\Http\Controllers\TeknisiTugasController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -32,8 +35,11 @@ Route::middleware('role:operator')->group(function () use ($sementara) {
     Route::get('/penerimaan', $sementara)->defaults('judul', 'Penerimaan aset')->name('penerimaan.index');
     Route::get('/mutasi', $sementara)->defaults('judul', 'Mutasi aset')->name('mutasi.index');
     Route::get('/penghapusan', $sementara)->defaults('judul', 'Penghapusan aset')->name('penghapusan.index');
-    Route::get('/perbaikan', $sementara)->defaults('judul', 'Perbaikan aset')->name('perbaikan.index');
-    Route::get('/pemeliharaan', $sementara)->defaults('judul', 'Pemeliharaan')->name('pemeliharaan.index');
+    Route::get('/perbaikan', [PerbaikanController::class, 'indexOperator'])->name('perbaikan.index');
+    Route::post('/perbaikan/{itemPerbaikan}/tugaskan', [PerbaikanController::class, 'tugaskanTeknisi'])->name('perbaikan.tugaskan');
+    Route::get('/pemeliharaan', [PemeliharaanController::class, 'index'])->name('pemeliharaan.index');
+    Route::post('/pemeliharaan', [PemeliharaanController::class, 'store'])->name('pemeliharaan.store');
+    Route::put('/pemeliharaan/{pemeliharaan}', [PemeliharaanController::class, 'update'])->name('pemeliharaan.update');
     Route::get('/cetak-label', $sementara)->defaults('judul', 'Cetak label aset')->name('label.index');
     Route::get('/kartu-kendali', $sementara)->defaults('judul', 'Kartu kendali ruangan')->name('kartu-kendali.index');
     Route::get('/arsip-bast', $sementara)->defaults('judul', 'Arsip BAST')->name('bast.index');
@@ -61,7 +67,8 @@ Route::middleware('role:pemohon')->prefix('pemohon')->group(function () use ($se
     Route::get('/aset-unit', $sementara)->defaults('judul', 'Daftar aset unit')->name('pemohon.aset-unit');
     Route::get('/pengajuan/pengadaan', [PengadaanController::class, 'create'])->name('pemohon.pengadaan');
     Route::post('/pengajuan/pengadaan', [PengadaanController::class, 'store'])->name('pemohon.pengadaan.store');
-    Route::get('/pengajuan/perbaikan', $sementara)->defaults('judul', 'Pengajuan perbaikan')->name('pemohon.perbaikan');
+    Route::get('/pengajuan/perbaikan', [PerbaikanController::class, 'pengajuanPemohon'])->name('pemohon.perbaikan');
+    Route::post('/pengajuan/perbaikan', [PerbaikanController::class, 'store'])->name('pemohon.perbaikan.store');
     Route::get('/pengajuan/mutasi', $sementara)->defaults('judul', 'Pengajuan mutasi')->name('pemohon.mutasi');
     Route::get('/pengajuan/penghapusan', $sementara)->defaults('judul', 'Pengajuan penghapusan')->name('pemohon.penghapusan');
     Route::get('/pengajuan', [PengajuanController::class, 'indexPemohon'])->name('pemohon.pengajuan');
@@ -79,8 +86,9 @@ Route::middleware('role:pegawai')->prefix('pegawai')->group(function () use ($se
 
 Route::middleware('role:teknisi')->prefix('teknisi')->group(function () use ($sementara) {
     Route::get('/', [DashboardController::class, 'teknisi'])->name('teknisi.dashboard');
-    Route::get('/tugas', $sementara)->defaults('judul', 'Tugas perbaikan')->name('teknisi.tugas');
-    Route::get('/riwayat', $sementara)->defaults('judul', 'Riwayat pekerjaan')->name('teknisi.riwayat');
+    Route::get('/tugas', [TeknisiTugasController::class, 'index'])->name('teknisi.tugas');
+    Route::post('/tugas/{itemPerbaikan}', [TeknisiTugasController::class, 'update'])->name('teknisi.tugas.update');
+    Route::get('/riwayat', [TeknisiTugasController::class, 'riwayat'])->name('teknisi.riwayat');
 });
 
 Route::middleware('auth')->group(function () {

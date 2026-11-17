@@ -130,7 +130,15 @@ export default function KepalaKantorShow({ pengajuan }) {
                                                 {it.nama_barang}
                                             </td>
                                             <td className="py-3 px-3 text-xs text-ink-600">
-                                                {it.spesifikasi}
+                                                <div>{it.spesifikasi}</div>
+                                                {it.foto_url && (
+                                                    <div className="mt-2">
+                                                        <a href={it.foto_url} target="_blank" rel="noopener noreferrer" className="inline-block group">
+                                                            <img src={it.foto_url} alt="Foto Kerusakan" className="h-16 w-16 rounded object-cover border border-line group-hover:opacity-90" />
+                                                            <span className="block text-[10px] text-brand-600 group-hover:underline mt-0.5">Lihat foto ↗</span>
+                                                        </a>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-3 px-3 text-center font-medium text-ink-900">
                                                 {it.jumlah}
