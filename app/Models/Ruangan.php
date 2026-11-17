@@ -33,6 +33,26 @@ class Ruangan extends Model
         return $this->hasMany(PenempatanAset::class, 'id_ruangan', 'id_ruangan');
     }
 
+    public function penempatanAktif()
+    {
+        return $this->hasMany(PenempatanAset::class, 'id_ruangan', 'id_ruangan')
+            ->whereNull('tanggal_selesai');
+    }
+
+    public function kodeRuangan(): string
+    {
+        $nomor = trim((string) $this->nomor_ruangan);
+        if ($nomor === '') {
+            return 'FTI-'.$this->id_ruangan;
+        }
+
+        if (str_starts_with(strtoupper($nomor), 'FTI-')) {
+            return strtoupper($nomor);
+        }
+
+        return 'FTI-'.$nomor;
+    }
+
     public function itemMutasi()
     {
         return $this->hasMany(ItemMutasi::class, 'id_ruangan_tujuan', 'id_ruangan');
