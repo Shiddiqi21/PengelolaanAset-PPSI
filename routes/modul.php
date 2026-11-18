@@ -6,6 +6,7 @@ use App\Http\Controllers\MutasiController;
 use App\Http\Controllers\PenerimaanController;
 use App\Http\Controllers\PengadaanController;
 use App\Http\Controllers\PengajuanController;
+use App\Http\Controllers\PenghapusanController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,7 +36,8 @@ Route::middleware('role:operator')->group(function () use ($sementara) {
     Route::post('/penerimaan', [PenerimaanController::class, 'store'])->name('penerimaan.store');
     Route::get('/mutasi', [MutasiController::class, 'indexOperator'])->name('mutasi.index');
     Route::post('/mutasi/{pengajuan}/proses', [MutasiController::class, 'proses'])->name('mutasi.proses');
-    Route::get('/penghapusan', $sementara)->defaults('judul', 'Penghapusan aset')->name('penghapusan.index');
+    Route::get('/penghapusan', [PenghapusanController::class, 'indexOperator'])->name('penghapusan.index');
+    Route::post('/penghapusan/{pengajuan}/proses', [PenghapusanController::class, 'proses'])->name('penghapusan.proses');
     Route::get('/perbaikan', $sementara)->defaults('judul', 'Perbaikan aset')->name('perbaikan.index');
     Route::get('/pemeliharaan', $sementara)->defaults('judul', 'Pemeliharaan')->name('pemeliharaan.index');
     Route::get('/cetak-label', $sementara)->defaults('judul', 'Cetak label aset')->name('label.index');
@@ -70,7 +72,11 @@ Route::middleware('role:pemohon')->prefix('pemohon')->group(function () use ($se
     Route::post('/pengajuan/mutasi', [MutasiController::class, 'store'])->name('pemohon.pengajuan.mutasi.store');
     Route::get('/pengajuan/mutasi/{pengajuan}/edit', [MutasiController::class, 'edit'])->name('pemohon.mutasi.edit');
     Route::match(['put', 'patch', 'post'], '/pengajuan/mutasi/{pengajuan}', [MutasiController::class, 'update'])->name('pemohon.mutasi.update');
-    Route::get('/pengajuan/penghapusan', $sementara)->defaults('judul', 'Pengajuan penghapusan')->name('pemohon.penghapusan');
+    Route::get('/pengajuan/penghapusan', [PenghapusanController::class, 'create'])->name('pemohon.penghapusan');
+    Route::get('/pengajuan/penghapusan/baru', [PenghapusanController::class, 'create'])->name('pemohon.pengajuan.penghapusan.create');
+    Route::post('/pengajuan/penghapusan', [PenghapusanController::class, 'store'])->name('pemohon.pengajuan.penghapusan.store');
+    Route::get('/pengajuan/penghapusan/{pengajuan}/edit', [PenghapusanController::class, 'edit'])->name('pemohon.penghapusan.edit');
+    Route::match(['put', 'patch', 'post'], '/pengajuan/penghapusan/{pengajuan}', [PenghapusanController::class, 'update'])->name('pemohon.penghapusan.update');
     Route::get('/pengajuan', [PengajuanController::class, 'indexPemohon'])->name('pemohon.pengajuan');
     Route::get('/pengajuan/{pengajuan}', [PengajuanController::class, 'showPemohon'])->name('pemohon.pengajuan.show');
     Route::get('/pengajuan/{pengajuan}/edit', [PengadaanController::class, 'edit'])->name('pemohon.pengajuan.edit');

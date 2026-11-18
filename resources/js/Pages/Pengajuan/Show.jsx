@@ -26,7 +26,7 @@ export default function Show({ pengajuan }) {
     const [dialogKirim, setDialogKirim] = useState(false);
     const [memproses, setMemproses] = useState(false);
 
-    const perluDokumen = ['pengadaan', 'mutasi'].includes(pengajuan.jenis_pengajuan);
+    const perluDokumen = ['pengadaan', 'mutasi', 'penghapusan'].includes(pengajuan.jenis_pengajuan);
     const belumAdaDokumen = perluDokumen && (!pengajuan.dokumen || pengajuan.dokumen.length === 0);
 
     const handleKirimDraft = () => {
@@ -123,7 +123,7 @@ export default function Show({ pengajuan }) {
 
                             {belumAdaDokumen && (
                                 <div className="rounded-lg border border-bahaya-200 bg-bahaya-50/80 p-3 text-xs text-bahaya-800">
-                                    <strong>Peringatan Dokumen Wajib:</strong> {pengajuan.jenis_pengajuan === 'mutasi' ? 'Dokumen persetujuan penerima atau pendukung mutasi belum dilampirkan.' : 'Dokumen permohonan atau RAB belum dilampirkan.'} Anda wajib melampirkan minimal satu berkas dokumen sebelum dapat mengirim ulang usulan ini. Silakan klik tombol <strong>Edit pengajuan</strong> untuk mengunggah berkas.
+                                    <strong>Peringatan Dokumen Wajib:</strong> {pengajuan.jenis_pengajuan === 'penghapusan' ? 'Dokumen foto fisik atau surat usulan penghapusan belum dilampirkan.' : pengajuan.jenis_pengajuan === 'mutasi' ? 'Dokumen persetujuan penerima atau pendukung mutasi belum dilampirkan.' : 'Dokumen permohonan atau RAB belum dilampirkan.'} Anda wajib melampirkan minimal satu berkas dokumen sebelum dapat mengirim ulang usulan ini. Silakan klik tombol <strong>Edit pengajuan</strong> untuk mengunggah berkas.
                                 </div>
                             )}
                         </div>
@@ -156,7 +156,7 @@ export default function Show({ pengajuan }) {
 
                             {belumAdaDokumen && (
                                 <div className="rounded-lg border border-bahaya-200 bg-bahaya-50/80 p-3 text-xs text-bahaya-800">
-                                    <strong>Peringatan Dokumen Wajib:</strong> {pengajuan.jenis_pengajuan === 'mutasi' ? 'Dokumen persetujuan penerima atau pendukung mutasi belum dilampirkan.' : 'Dokumen permohonan atau RAB belum dilampirkan.'} Anda wajib melampirkan minimal satu berkas dokumen sebelum dapat mengirimkan usulan ini ke antrean verifikasi. Silakan klik tombol <strong>Edit pengajuan</strong> untuk mengunggah berkas.
+                                    <strong>Peringatan Dokumen Wajib:</strong> {pengajuan.jenis_pengajuan === 'penghapusan' ? 'Dokumen foto fisik atau surat usulan penghapusan belum dilampirkan.' : pengajuan.jenis_pengajuan === 'mutasi' ? 'Dokumen persetujuan penerima atau pendukung mutasi belum dilampirkan.' : 'Dokumen permohonan atau RAB belum dilampirkan.'} Anda wajib melampirkan minimal satu berkas dokumen sebelum dapat mengirimkan usulan ini ke antrean verifikasi. Silakan klik tombol <strong>Edit pengajuan</strong> untuk mengunggah berkas.
                                 </div>
                             )}
                         </div>

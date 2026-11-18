@@ -174,6 +174,10 @@ class PengadaanController extends Controller
             return app(MutasiController::class)->edit($request, $pengajuan);
         }
 
+        if ($pengajuan->jenis_pengajuan === 'penghapusan') {
+            return app(PenghapusanController::class)->edit($request, $pengajuan);
+        }
+
         if ($pengajuan->jenis_pengajuan !== 'pengadaan') {
             abort(404, 'Formulir edit ini hanya untuk pengajuan pengadaan.');
         }

@@ -126,6 +126,13 @@ class PengajuanController extends Controller
                 ]);
         }
 
+        if ($pengajuan->jenis_pengajuan === 'penghapusan' && $pengajuan->dokumen()->count() < 1) {
+            return redirect()->route('pemohon.pengajuan.show', $pengajuan->id_pengajuan)
+                ->withErrors([
+                    'status' => 'Pengajuan penghapusan tidak dapat dikirim karena belum ada dokumen foto fisik atau surat usulan yang dilampirkan. Silakan klik Edit pengajuan untuk mengunggah berkas terlebih dahulu.',
+                ]);
+        }
+
         $this->statusService->kirimDraft($pengajuan, $request->user()->id_pengguna);
 
         return redirect()->route('pemohon.pengajuan.show', $pengajuan->id_pengajuan)
@@ -660,7 +667,8 @@ class PengajuanController extends Controller
             'itemMutasi.aset.penempatanAktif.penanggungJawab',
             'itemMutasi.ruanganTujuan.gedung',
             'itemMutasi.penanggungJawabTujuan',
-            'itemPenghapusan.aset',
+            'itemPenghapusan.aset.kategori',
+            'itemPenghapusan.aset.penempatanAktif.ruangan.gedung',
         ]);
 
         $isRevisi = $pengajuan->is_revisi;
@@ -707,15 +715,28 @@ class PengajuanController extends Controller
                     'pj_tujuan' => $pjTujuan,
                 ];
             })->values(),
-            'penghapusan' => $pengajuan->itemPenghapusan->map(fn ($item) => [
-                'id' => $item->id_item_penghapusan,
-                'kategori' => 'Penghapusan Aset',
-                'nama_barang' => $item->aset?->nama_barang ?? "Aset #{$item->id_aset}",
-                'spesifikasi' => "Jalur: {$item->jalur_penghapusan}" . ($item->catatan_tim_penilai ? " — {$item->catatan_tim_penilai}" : ''),
-                'jumlah' => 1,
-                'harga_satuan' => (float) $item->nilai_penjualan,
-                'subtotal' => (float) $item->nilai_penjualan,
-            ])->values(),
+            'penghapusan' => $pengajuan->itemPenghapusan->map(function ($item) {
+                $aset = $item->aset;
+                $spesifikasi = $item->jalur_penghapusan
+                    ? "Jalur: {$item->jalur_penghapusan}" . ($item->pihak_penerima ? " (Penerima: {$item->pihak_penerima})" : '') . ($item->catatan_tim_penilai ? " — {$item->catatan_tim_penilai}" : '')
+                    : ("Kondisi: " . ucfirst($aset?->kondisi ?? 'rusak_berat') . ($aset?->tahun_perolehan ? " • Tahun: {$aset->tahun_perolehan}" : ''));
+
+                return [
+                    'id' => $item->id_item_penghapusan,
+                    'kategori' => $aset?->kategori?->nama_kategori ?? 'Penghapusan Aset',
+                    'nama_barang' => $aset ? "{$aset->nama_barang} ({$aset->kode_aset})" : "Aset #{$item->id_aset}",
+                    'spesifikasi' => $spesifikasi,
+                    'jumlah' => 1,
+                    'harga_satuan' => (float) ($item->nilai_penjualan ?? $aset?->harga_perolehan ?? 0),
+                    'subtotal' => (float) ($item->nilai_penjualan ?? 0),
+                    'kode_aset' => $aset?->kode_aset,
+                    'kondisi' => $aset?->kondisi,
+                    'tahun_perolehan' => $aset?->tahun_perolehan,
+                    'harga_perolehan' => (float) ($aset?->harga_perolehan ?? 0),
+                    'jalur_penghapusan' => $item->jalur_penghapusan,
+                    'pihak_penerima' => $item->pihak_penerima,
+                ];
+            })->values(),
             default => collect(),
         };
 
