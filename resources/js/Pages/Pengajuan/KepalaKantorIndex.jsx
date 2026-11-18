@@ -101,7 +101,11 @@ export default function KepalaKantorIndex({ daftarPengajuan, statistik, filters 
         {
             judul: 'Estimasi Nilai',
             render: (b) => (
-                <span className="font-medium text-ink-900">{formatRupiah(b.total_estimasi)}</span>
+                b.jenis_pengajuan === 'mutasi' || b.jenis_pengajuan === 'penghapusan' ? (
+                    <span className="text-xs text-ink-400">-</span>
+                ) : (
+                    <span className="font-medium text-ink-900">{formatRupiah(b.total_estimasi)}</span>
+                )
             ),
         },
         {

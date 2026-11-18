@@ -501,6 +501,7 @@ class PenghapusanController extends Controller
             ->with([
                 'pemohon.unit',
                 'itemPenghapusan.aset.kategori',
+                'itemPenghapusan.aset.penempatanAktif.ruangan',
                 'dokumen',
                 'beritaAcara',
                 'riwayatStatus.pengguna',

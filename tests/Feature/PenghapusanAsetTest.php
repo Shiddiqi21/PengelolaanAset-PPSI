@@ -467,4 +467,89 @@ class PenghapusanAsetTest extends TestCase
         $this->assertEquals('dihapus', $aset->status_aset);
         $this->assertEquals('rusak_berat', $aset->kondisi);
     }
+
+    public function test_detail_pengajuan_penghapusan_menampilkan_nilai_perolehan_dan_dasar_usulan(): void
+    {
+        $unit = Unit::query()->create(['nama_unit' => 'Departemen SI', 'jenis_unit' => 'departemen']);
+        $pemohon = $this->akun(PeranNama::PEMOHON, ['id_unit' => $unit->id_unit]);
+        $ruangan = $this->buatRuangan('Lab Data', 'DAT-101', $unit);
+        $aset = $this->buatAsetAktif($ruangan, $pemohon);
+
+        $keteranganParts = [
+            'Perihal: Usulan Penghapusan Switch Rusak',
+            'Unit Pengusul: Departemen SI',
+            'Dasar Usulan: Kerusakan berat akibat bencana/petir',
+            'Alasan & Penjelasan Kondisi: Tidak dapat diperbaiki secara ekonomis dan komponen terbakar',
+        ];
+
+        $pengajuan = Pengajuan::query()->create([
+            'id_pemohon' => $pemohon->id_pengguna,
+            'nomor_pengajuan' => 'HPS-2026-0999',
+            'jenis_pengajuan' => 'penghapusan',
+            'status' => 'diajukan',
+            'keterangan' => implode("\n", $keteranganParts),
+            'tanggal_pengajuan' => now(),
+        ]);
+
+        ItemPenghapusan::query()->create([
+            'id_pengajuan' => $pengajuan->id_pengajuan,
+            'id_aset' => $aset->id_aset,
+        ]);
+
+        $this->actingAs($pemohon)
+            ->get(route('pemohon.pengajuan.show', $pengajuan->id_pengajuan))
+            ->assertOk()
+            ->assertInertia(function ($page) use ($aset) {
+                $p = $page->toArray()['props']['pengajuan'];
+                $this->assertEquals('penghapusan', $p['jenis_pengajuan']);
+                $this->assertEquals(0, $p['total_estimasi']);
+                $this->assertEquals((float) $aset->harga_perolehan, $p['total_nilai_perolehan']);
+                $this->assertNotNull($p['penghapusan_meta']);
+                $this->assertStringContainsString('Kerusakan berat', $p['penghapusan_meta']['dasar_usulan']);
+
+                $item = $p['items'][0];
+                $this->assertEquals($aset->kode_aset, $item['kode_aset']);
+                $this->assertEquals((float) $aset->harga_perolehan, $item['harga_perolehan']);
+            });
+    }
+
+    public function test_meja_kerja_operator_riwayat_penghapusan_menampilkan_status_selesai(): void
+    {
+        $unit = Unit::query()->create(['nama_unit' => 'Departemen SI', 'jenis_unit' => 'departemen']);
+        $pemohon = $this->akun(PeranNama::PEMOHON, ['id_unit' => $unit->id_unit]);
+        $operator = $this->akun(PeranNama::OPERATOR);
+        $ruangan = $this->buatRuangan('Lab Data', 'DAT-101', $unit);
+        $aset = $this->buatAsetAktif($ruangan, $pemohon);
+
+        $pengajuan = Pengajuan::query()->create([
+            'id_pemohon' => $pemohon->id_pengguna,
+            'nomor_pengajuan' => 'HPS-2026-0777',
+            'jenis_pengajuan' => 'penghapusan',
+            'status' => 'selesai',
+            'keterangan' => 'Penghapusan switch rusak berat tuntas',
+            'tanggal_pengajuan' => now(),
+        ]);
+
+        ItemPenghapusan::query()->create([
+            'id_pengajuan' => $pengajuan->id_pengajuan,
+            'id_aset' => $aset->id_aset,
+            'jalur_penghapusan' => 'sharing_internal',
+            'pihak_penerima' => 'Laboratorium Rekayasa Perangkat Lunak',
+            'tanggal_penghapusan' => now()->toDateString(),
+        ]);
+
+        $this->actingAs($operator)
+            ->get(route('penghapusan.index', ['tab' => 'riwayat']))
+            ->assertOk()
+            ->assertInertia(function ($page) {
+                $riwayat = $page->toArray()['props']['riwayatPenghapusan']['data'];
+                $this->assertNotEmpty($riwayat);
+
+                $target = collect($riwayat)->firstWhere('nomor_pengajuan', 'HPS-2026-0777');
+                $this->assertNotNull($target);
+                $this->assertEquals('selesai', $target['status']);
+                $this->assertNotEmpty($target['item_penghapusan']);
+                $this->assertEquals('sharing_internal', $target['item_penghapusan'][0]['jalur_penghapusan']);
+            });
+    }
 }

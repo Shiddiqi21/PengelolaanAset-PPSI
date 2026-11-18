@@ -94,9 +94,13 @@ export default function PimpinanIndex({ daftarPersetujuan, tabAktif = 'menunggu'
         {
             judul: 'Estimasi Anggaran',
             render: (b) => (
-                <span className="font-semibold text-brand-700">
-                    {formatRupiah(b.total_estimasi)}
-                </span>
+                b.jenis_pengajuan === 'mutasi' || b.jenis_pengajuan === 'penghapusan' ? (
+                    <span className="text-xs text-ink-400">-</span>
+                ) : (
+                    <span className="font-semibold text-brand-700">
+                        {formatRupiah(b.total_estimasi)}
+                    </span>
+                )
             ),
         },
         {

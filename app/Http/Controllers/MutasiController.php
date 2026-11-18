@@ -545,11 +545,17 @@ class MutasiController extends Controller
             ->orderByDesc('id_pengajuan')
             ->get()
             ->map(function (Pengajuan $p) {
+                $p->mutasi_meta = $this->ekstrakMutasiMeta($p);
                 // Pasang ruanganAsal dan penanggungJawabAsal pada setiap itemMutasi
                 $p->itemMutasi->each(function (ItemMutasi $item) {
                     $penempatan = $item->aset?->penempatanAktif;
-                    $item->setRelation('ruanganAsal', $penempatan?->ruangan);
-                    $item->setRelation('penanggungJawabAsal', $penempatan?->penanggungJawab);
+                    $ruanganAsal = $penempatan?->ruangan;
+                    $pjAsal = $penempatan?->penanggungJawab;
+
+                    $item->setRelation('ruanganAsal', $ruanganAsal);
+                    $item->setRelation('ruangan_asal', $ruanganAsal);
+                    $item->setRelation('penanggungJawabAsal', $pjAsal);
+                    $item->setRelation('penanggung_jawab_asal', $pjAsal);
                 });
                 return $p;
             });
@@ -561,10 +567,10 @@ class MutasiController extends Controller
             ->with([
                 'pemohon.unit',
                 'itemMutasi.aset.kategori',
+                'itemMutasi.ruanganAsal.gedung',
                 'itemMutasi.ruanganTujuan.gedung',
+                'itemMutasi.penanggungJawabAsal',
                 'itemMutasi.penanggungJawabTujuan',
-                'itemMutasi.penempatan.ruangan.gedung',
-                'itemMutasi.penempatan.penanggungJawab',
                 'dokumen',
                 'beritaAcara',
                 'riwayatStatus.pengguna',
@@ -585,19 +591,26 @@ class MutasiController extends Controller
             ->paginate(10)
             ->withQueryString()
             ->through(function (Pengajuan $p) {
+                $p->mutasi_meta = $this->ekstrakMutasiMeta($p);
                 $p->itemMutasi->each(function (ItemMutasi $item) {
-                    // Cari penempatan sebelum mutasi ini
-                    $penempatanBaru = $item->penempatan;
-                    $penempatanLama = null;
-                    if ($penempatanBaru) {
+                    $ruanganAsal = $item->ruanganAsal;
+                    $pjAsal = $item->penanggungJawabAsal;
+
+                    if (! $ruanganAsal || ! $pjAsal) {
                         $penempatanLama = PenempatanAset::with(['ruangan.gedung', 'penanggungJawab'])
                             ->where('id_aset', $item->id_aset)
-                            ->where('id_penempatan', '<', $penempatanBaru->id_penempatan)
+                            ->whereNotNull('tanggal_selesai')
                             ->orderByDesc('id_penempatan')
                             ->first();
+
+                        $ruanganAsal = $ruanganAsal ?? $penempatanLama?->ruangan ?? $item->aset?->penempatanAktif?->ruangan;
+                        $pjAsal = $pjAsal ?? $penempatanLama?->penanggungJawab ?? $item->aset?->penempatanAktif?->penanggungJawab;
                     }
-                    $item->setRelation('ruanganAsal', $penempatanLama?->ruangan ?? $item->aset?->penempatanAktif?->ruangan);
-                    $item->setRelation('penanggungJawabAsal', $penempatanLama?->penanggungJawab ?? $item->aset?->penempatanAktif?->penanggungJawab);
+
+                    $item->setRelation('ruanganAsal', $ruanganAsal);
+                    $item->setRelation('ruangan_asal', $ruanganAsal);
+                    $item->setRelation('penanggungJawabAsal', $pjAsal);
+                    $item->setRelation('penanggung_jawab_asal', $pjAsal);
                 });
                 return $p;
             });
@@ -754,5 +767,42 @@ class MutasiController extends Controller
         }
 
         return $nomor;
+    }
+
+    /**
+     * Ekstrak metadata usulan mutasi dari teks pengajuan->keterangan.
+     *
+     * @return array{perihal: string, jenis_mutasi: string, tanggal_mutasi: string, alasan_mutasi: string}
+     */
+    private function ekstrakMutasiMeta(Pengajuan $pengajuan): array
+    {
+        $jenisMutasi = 'Antarruangan dalam fakultas';
+        if (preg_match('/^Jenis Mutasi:\s*(.*)$/m', $pengajuan->keterangan ?? '', $m)) {
+            $jenisMutasi = trim($m[1]);
+        }
+
+        $tanggalMutasi = '-';
+        if (preg_match('/^Tanggal Usulan Pemindahan:\s*(.*)$/m', $pengajuan->keterangan ?? '', $m)) {
+            $tanggalMutasi = trim($m[1]);
+        }
+
+        $alasanMutasi = '';
+        if (preg_match('/^Alasan & Manfaat:\s*(.*)$/ms', $pengajuan->keterangan ?? '', $m)) {
+            $alasanMutasi = trim($m[1]);
+        } else {
+            $alasanMutasi = $pengajuan->keterangan ?? '-';
+        }
+
+        $perihal = '-';
+        if (preg_match('/^Perihal:\s*(.*)$/m', $pengajuan->keterangan ?? '', $m)) {
+            $perihal = trim($m[1]);
+        }
+
+        return [
+            'perihal' => $perihal,
+            'jenis_mutasi' => $jenisMutasi,
+            'tanggal_mutasi' => $tanggalMutasi,
+            'alasan_mutasi' => $alasanMutasi,
+        ];
     }
 }

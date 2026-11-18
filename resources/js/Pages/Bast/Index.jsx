@@ -225,6 +225,7 @@ export default function BastIndex({
     // Kolom Tabel BAST
     const kolomTabel = [
         {
+            judul: 'Nomor BAST',
             header: 'Nomor BAST',
             render: (row) => (
                 <div
@@ -239,10 +240,12 @@ export default function BastIndex({
             ),
         },
         {
+            judul: 'Jenis',
             header: 'Jenis',
             render: (row) => getBadgeJenis(row.jenis_bast),
         },
         {
+            judul: 'Referensi',
             header: 'Referensi',
             render: (row) => {
                 if (row.penerimaan) {
@@ -265,6 +268,7 @@ export default function BastIndex({
             },
         },
         {
+            judul: 'Status',
             header: 'Status',
             render: (row) => (
                 row.status === 'selesai' ? (
@@ -275,6 +279,7 @@ export default function BastIndex({
             ),
         },
         {
+            judul: 'Aksi',
             header: 'Aksi',
             render: (row) => (
                 <div className="flex items-center gap-1.5">
@@ -435,9 +440,10 @@ export default function BastIndex({
                         </div>
 
                         <DataTable
-                            columns={kolomTabel}
-                            data={daftarBast?.data || []}
-                            emptyState={
+                            kolom={kolomTabel}
+                            baris={daftarBast?.data || []}
+                            kunciBaris="id_bast"
+                            kosong={
                                 <EmptyState
                                     judul="Data tidak ditemukan"
                                     deskripsi="Tidak ada arsip berita acara yang sesuai dengan kriteria pencarian atau filter yang dipilih."

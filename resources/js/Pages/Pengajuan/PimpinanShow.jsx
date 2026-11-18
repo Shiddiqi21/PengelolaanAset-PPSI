@@ -50,6 +50,30 @@ export default function PimpinanShow({ pengajuan, dapatDiputuskan = false }) {
         ? Boolean(dapatDiputuskan)
         : pengajuan.status === 'disetujui_kadep';
 
+    const totalNilaiPerolehan =
+        pengajuan.total_nilai_perolehan ||
+        (pengajuan.items || []).reduce((acc, it) => acc + (Number(it.harga_perolehan) || 0), 0);
+
+    const dasarUsulan =
+        pengajuan.penghapusan_meta?.dasar_usulan ||
+        (() => {
+            if (typeof pengajuan.keterangan === 'string') {
+                const match = pengajuan.keterangan.match(/Dasar Usulan:\s*(.*)/);
+                if (match) return match[1].trim();
+            }
+            return 'Kerusakan berat / tidak ekonomis';
+        })();
+
+    const alasanPenghapusan =
+        pengajuan.penghapusan_meta?.alasan_penghapusan ||
+        (() => {
+            if (typeof pengajuan.keterangan === 'string') {
+                const match = pengajuan.keterangan.match(/Alasan & Penjelasan Kondisi:\s*([\s\S]*)/);
+                if (match) return match[1].trim();
+            }
+            return pengajuan.keterangan || '-';
+        })();
+
     let alertStatus = {
         nada: 'info',
         pesan: `Keputusan final untuk pengajuan ini telah ditetapkan dengan status ${pengajuan.status_label}.`,
@@ -132,57 +156,179 @@ export default function PimpinanShow({ pengajuan, dapatDiputuskan = false }) {
                     </Card>
 
                     {/* 2. Rincian Kebutuhan & Anggaran */}
-                    <Card
-                        judul="Rincian barang & usulan anggaran"
-                        deskripsi={`Daftar barang yang dimohonkan persetujuan (${pengajuan.items.length} item).`}
-                    >
-                        <div className="overflow-x-auto px-4 pb-4">
-                            <table className="min-w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-line text-left text-xs font-semibold text-ink-500">
-                                        <th className="py-2.5 pr-3">No</th>
-                                        <th className="py-2.5 px-3">Kategori</th>
-                                        <th className="py-2.5 px-3">Nama Barang / Aset</th>
-                                        <th className="py-2.5 px-3">Spesifikasi</th>
-                                        <th className="py-2.5 px-3 text-center">Jumlah</th>
-                                        <th className="py-2.5 pl-3 text-right">Estimasi Anggaran</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-line">
-                                    {pengajuan.items.map((it, idx) => (
-                                        <tr key={it.id ?? idx} className="align-top">
-                                            <td className="py-3 pr-3 text-ink-500">{idx + 1}</td>
-                                            <td className="py-3 px-3">
-                                                <Badge nada="netral">{it.kategori}</Badge>
+                    {pengajuan.jenis_pengajuan === 'mutasi' ? (
+                        <Card
+                            judul="Rincian aset & tujuan mutasi"
+                            deskripsi={`Daftar unit aset yang diusulkan untuk dipindahkan (${pengajuan.items.length} unit).`}
+                        >
+                            <div className="overflow-x-auto px-4 pb-4">
+                                <table className="min-w-full text-xs">
+                                    <thead>
+                                        <tr className="border-b border-line text-left font-semibold text-ink-500 uppercase tracking-wider text-[11px]">
+                                            <th className="py-2.5 pr-2 w-8">No</th>
+                                            <th className="py-2.5 px-3">Kode & Nama Aset</th>
+                                            <th className="py-2.5 px-3">Lokasi & PJ Asal</th>
+                                            <th className="py-2.5 px-3">Lokasi & PJ Tujuan</th>
+                                            <th className="py-2.5 px-3">Jenis & Tgl Usulan</th>
+                                            <th className="py-2.5 pl-3">Alasan Mutasi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-line">
+                                        {pengajuan.items.map((it, idx) => (
+                                            <tr key={it.id ?? idx} className="align-top hover:bg-surface/40">
+                                                <td className="py-3 pr-2 text-ink-400 font-mono">{idx + 1}</td>
+                                                <td className="py-3 px-3">
+                                                    <p className="font-bold text-ink-900">{it.nama_barang}</p>
+                                                    <p className="font-mono text-ink-500 text-[11px]">{it.kode_aset || '-'}</p>
+                                                    <Badge nada="netral" className="mt-1">{it.kategori}</Badge>
+                                                </td>
+                                                <td className="py-3 px-3">
+                                                    <p className="font-semibold text-ink-800">{it.ruangan_asal || '-'}</p>
+                                                    <p className="text-[11px] text-ink-500 mt-0.5">PJ: {it.pj_asal || '-'}</p>
+                                                </td>
+                                                <td className="py-3 px-3">
+                                                    <p className="font-semibold text-brand-800">{it.ruangan_tujuan || '-'}</p>
+                                                    <p className="text-[11px] text-ink-500 mt-0.5">PJ Baru: {it.pj_tujuan || '-'}</p>
+                                                </td>
+                                                <td className="py-3 px-3">
+                                                    <Badge nada="info" className="text-[10px] whitespace-nowrap">
+                                                        {it.jenis_mutasi || 'Antarruangan'}
+                                                    </Badge>
+                                                    <p className="text-[11px] text-ink-500 mt-1">{it.tanggal_mutasi || '-'}</p>
+                                                </td>
+                                                <td className="py-3 pl-3 text-ink-700 leading-relaxed max-w-xs">
+                                                    {it.alasan_mutasi || '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Card>
+                    ) : pengajuan.jenis_pengajuan === 'penghapusan' ? (
+                        <Card
+                            judul="Rincian aset yang diusulkan dihapus"
+                            deskripsi={`Daftar unit aset yang diusulkan untuk dihapus (${pengajuan.items.length} unit).`}
+                        >
+                            <div className="overflow-x-auto px-4 pb-4">
+                                <table className="min-w-full text-xs">
+                                    <thead>
+                                        <tr className="border-b border-line text-left font-semibold text-ink-500 uppercase tracking-wider text-[11px]">
+                                            <th className="py-2.5 pr-2 w-8">No</th>
+                                            <th className="py-2.5 px-3">Kode & Nama Aset</th>
+                                            <th className="py-2.5 px-3">Kondisi Fisik</th>
+                                            <th className="py-2.5 px-3 text-right">Nilai Perolehan / Buku</th>
+                                            <th className="py-2.5 pl-3">Jalur / Dasar Usulan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-line">
+                                        {pengajuan.items.map((it, idx) => (
+                                            <tr key={it.id ?? idx} className="align-top hover:bg-surface/40">
+                                                <td className="py-3 pr-2 text-ink-400 font-mono">{idx + 1}</td>
+                                                <td className="py-3 px-3">
+                                                    <p className="font-bold text-ink-900">{it.nama_barang}</p>
+                                                    <p className="font-mono text-ink-500 text-[11px]">{it.kode_aset || '-'}</p>
+                                                    <div className="mt-1 flex items-center gap-1.5">
+                                                        <Badge nada="netral">{it.kategori}</Badge>
+                                                        {it.tahun_perolehan && (
+                                                            <span className="text-[10px] text-ink-400">
+                                                                Tahun {it.tahun_perolehan}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-3">
+                                                    <Badge nada="peringatan" className="capitalize">
+                                                        {(it.kondisi || 'rusak_berat').replace('_', ' ')}
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-3 px-3 text-right font-medium text-ink-900">
+                                                    {formatRupiah(it.harga_perolehan)}
+                                                </td>
+                                                <td className="py-3 pl-3 text-ink-700 leading-relaxed max-w-xs">
+                                                    {it.jalur_penghapusan ? (
+                                                        <span className="inline-block rounded bg-surface px-2 py-0.5 font-semibold text-ink-800 border border-line">
+                                                            {it.jalur_penghapusan.replace('_', ' ')}
+                                                        </span>
+                                                    ) : (
+                                                        <span>{it.spesifikasi || dasarUsulan || '-'}</span>
+                                                    )}
+                                                    {it.pihak_penerima && (
+                                                        <p className="mt-1 text-[11px] text-ink-500">Penerima: {it.pihak_penerima}</p>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="border-t-2 border-line font-bold text-ink-900">
+                                            <td colSpan={3} className="py-3 text-right">
+                                                Total Nilai Perolehan / Buku Aset:
                                             </td>
-                                            <td className="py-3 px-3 font-semibold text-ink-900">
-                                                {it.nama_barang}
+                                            <td className="py-3 px-3 text-right text-brand-700">
+                                                {formatRupiah(totalNilaiPerolehan)}
                                             </td>
-                                            <td className="py-3 px-3 text-xs text-ink-600">
-                                                {it.spesifikasi}
-                                            </td>
-                                            <td className="py-3 px-3 text-center font-medium text-ink-900">
-                                                {it.jumlah}
-                                            </td>
-                                            <td className="py-3 pl-3 text-right font-medium text-ink-900">
-                                                {formatRupiah(it.subtotal)}
+                                            <td className="py-3 pl-3 text-ink-500 font-normal text-[11px]">
+                                                ({pengajuan.items.length} unit aset)
                                             </td>
                                         </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot>
-                                    <tr className="border-t-2 border-line font-bold text-ink-900">
-                                        <td colSpan={5} className="py-3 text-right">
-                                            Total Komitmen Anggaran:
-                                        </td>
-                                        <td className="py-3 pl-3 text-right text-brand-700">
-                                            {formatRupiah(pengajuan.total_estimasi)}
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </Card>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </Card>
+                    ) : (
+                        <Card
+                            judul="Rincian barang & usulan anggaran"
+                            deskripsi={`Daftar barang yang dimohonkan persetujuan (${pengajuan.items.length} item).`}
+                        >
+                            <div className="overflow-x-auto px-4 pb-4">
+                                <table className="min-w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-line text-left text-xs font-semibold text-ink-500">
+                                            <th className="py-2.5 pr-3">No</th>
+                                            <th className="py-2.5 px-3">Kategori</th>
+                                            <th className="py-2.5 px-3">Nama Barang / Aset</th>
+                                            <th className="py-2.5 px-3">Spesifikasi</th>
+                                            <th className="py-2.5 px-3 text-center">Jumlah</th>
+                                            <th className="py-2.5 pl-3 text-right">Estimasi Anggaran</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-line">
+                                        {pengajuan.items.map((it, idx) => (
+                                            <tr key={it.id ?? idx} className="align-top">
+                                                <td className="py-3 pr-3 text-ink-500">{idx + 1}</td>
+                                                <td className="py-3 px-3">
+                                                    <Badge nada="netral">{it.kategori}</Badge>
+                                                </td>
+                                                <td className="py-3 px-3 font-semibold text-ink-900">
+                                                    {it.nama_barang}
+                                                </td>
+                                                <td className="py-3 px-3 text-xs text-ink-600">
+                                                    {it.spesifikasi}
+                                                </td>
+                                                <td className="py-3 px-3 text-center font-medium text-ink-900">
+                                                    {it.jumlah}
+                                                </td>
+                                                <td className="py-3 pl-3 text-right font-medium text-ink-900">
+                                                    {formatRupiah(it.subtotal)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="border-t-2 border-line font-bold text-ink-900">
+                                            <td colSpan={5} className="py-3 text-right">
+                                                Total Komitmen Anggaran:
+                                            </td>
+                                            <td className="py-3 pl-3 text-right text-brand-700">
+                                                {formatRupiah(pengajuan.total_estimasi)}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </Card>
+                    )}
 
                     {/* 3. Dokumen Pendukung */}
                     <Card
@@ -404,17 +550,80 @@ export default function PimpinanShow({ pengajuan, dapatDiputuskan = false }) {
 
                 {/* Kolom Kanan: Rekomendasi Kepala Kantor & Timeline (4 Kolom) */}
                 <div className="space-y-6 lg:col-span-4">
-                    {/* Ringkasan Anggaran */}
-                    <Card judul="Komitmen anggaran">
+                    {/* Ringkasan Anggaran / Usulan */}
+                    <Card
+                        judul={
+                            pengajuan.jenis_pengajuan === 'mutasi'
+                                ? 'Ringkasan usulan mutasi'
+                                : pengajuan.jenis_pengajuan === 'penghapusan'
+                                ? 'Ringkasan penghapusan'
+                                : 'Komitmen anggaran'
+                        }
+                    >
                         <IsiKartu className="space-y-3">
-                            <div className="rounded-lg border border-line bg-surface p-4">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-                                    Total Anggaran Diusulkan
-                                </p>
-                                <p className="mt-1 text-2xl font-bold tracking-tight text-brand-700">
-                                    {formatRupiah(pengajuan.total_estimasi)}
-                                </p>
-                            </div>
+                            {pengajuan.jenis_pengajuan === 'mutasi' ? (
+                                <div className="rounded-lg border border-line bg-surface p-4 space-y-2.5">
+                                    <div>
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">
+                                            Jumlah Unit Dimutasi
+                                        </p>
+                                        <p className="text-xl font-bold tracking-tight text-brand-700">
+                                            {pengajuan.items.length} Unit Aset
+                                        </p>
+                                    </div>
+                                    <div className="border-t border-line/60 pt-2 text-xs">
+                                        <span className="text-ink-500">Jenis Mutasi:</span>
+                                        <p className="font-semibold text-ink-800 mt-0.5">
+                                            {pengajuan.mutasi_meta?.jenis_mutasi || 'Antarruangan dalam fakultas'}
+                                        </p>
+                                    </div>
+                                    {pengajuan.mutasi_meta?.tanggal_mutasi && pengajuan.mutasi_meta.tanggal_mutasi !== '-' && (
+                                        <div className="border-t border-line/60 pt-2 text-xs">
+                                            <span className="text-ink-500">Usulan Pemindahan:</span>
+                                            <p className="font-medium text-ink-800 mt-0.5">
+                                                {pengajuan.mutasi_meta.tanggal_mutasi}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : pengajuan.jenis_pengajuan === 'penghapusan' ? (
+                                <div className="rounded-lg border border-line bg-surface p-4 space-y-2.5">
+                                    <div>
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-500">
+                                            Total Nilai Perolehan / Buku
+                                        </p>
+                                        <p className="text-xl font-bold tracking-tight text-brand-700">
+                                            {formatRupiah(totalNilaiPerolehan)}
+                                        </p>
+                                        <p className="text-[11px] text-ink-500 mt-0.5">
+                                            {pengajuan.items.length} Unit Aset Diusulkan
+                                        </p>
+                                    </div>
+                                    <div className="border-t border-line/60 pt-2 text-xs">
+                                        <span className="text-ink-500">Dasar Usulan Penghapusan:</span>
+                                        <p className="font-semibold text-ink-800 mt-0.5">
+                                            {dasarUsulan}
+                                        </p>
+                                    </div>
+                                    {alasanPenghapusan && alasanPenghapusan !== '-' && (
+                                        <div className="border-t border-line/60 pt-2 text-xs">
+                                            <span className="text-ink-500">Alasan & Kondisi:</span>
+                                            <p className="text-ink-700 mt-0.5 leading-relaxed">
+                                                {alasanPenghapusan}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="rounded-lg border border-line bg-surface p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">
+                                        Total Anggaran Diusulkan
+                                    </p>
+                                    <p className="mt-1 text-2xl font-bold tracking-tight text-brand-700">
+                                        {formatRupiah(pengajuan.total_estimasi)}
+                                    </p>
+                                </div>
+                            )}
                         </IsiKartu>
                     </Card>
 

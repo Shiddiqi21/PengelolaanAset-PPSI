@@ -400,4 +400,165 @@ class MutasiAsetTest extends TestCase
         $this->assertStringContainsString('Hasil Perbaikan', $pengajuan->keterangan);
         $this->assertEquals($ruanganTujuanBaru->id_ruangan, $pengajuan->itemMutasi->first()->id_ruangan_tujuan);
     }
+
+    public function test_operator_tidak_bisa_eksekusi_mutasi_sebelum_disetujui_pimpinan(): void
+    {
+        $unit = Unit::query()->create(['nama_unit' => 'Departemen TI', 'jenis_unit' => 'departemen']);
+        $pemohon = $this->akun(PeranNama::PEMOHON, ['id_unit' => $unit->id_unit]);
+        $operator = $this->akun(PeranNama::OPERATOR);
+        $ruanganAsal = $this->buatRuangan('Lab Pemrograman', 'LAB-101', $unit);
+        $ruanganTujuan = $this->buatRuangan('Ruang Dosen TI', 'DSN-201', $unit);
+        $aset = $this->buatAsetAktif($ruanganAsal, $pemohon);
+
+        $pengajuan = Pengajuan::query()->create([
+            'id_pemohon' => $pemohon->id_pengguna,
+            'nomor_pengajuan' => 'MTS-2026-0099',
+            'jenis_pengajuan' => 'mutasi',
+            'status' => 'diajukan', // Belum disetujui_pimpinan!
+            'keterangan' => 'Usulan mutasi baru diajukan',
+            'tanggal_pengajuan' => now(),
+        ]);
+
+        $itemMutasi = ItemMutasi::query()->create([
+            'id_pengajuan' => $pengajuan->id_pengajuan,
+            'id_aset' => $aset->id_aset,
+            'id_ruangan_tujuan' => $ruanganTujuan->id_ruangan,
+        ]);
+
+        // Coba eksekusi langsung saat masih diajukan -> harus ditolak (422)
+        $this->actingAs($operator)
+            ->post(route('mutasi.proses', $pengajuan->id_pengajuan), [
+                'tanggal_eksekusi' => now()->toDateString(),
+                'items' => [
+                    [
+                        'id_item_mutasi' => $itemMutasi->id_item_mutasi,
+                        'id_ruangan_tujuan' => $ruanganTujuan->id_ruangan,
+                    ],
+                ],
+            ])
+            ->assertStatus(422);
+
+        // Ubah status ke disetujui_kadep -> tetap ditolak (422)
+        $pengajuan->update(['status' => 'disetujui_kadep']);
+
+        $this->actingAs($operator)
+            ->post(route('mutasi.proses', $pengajuan->id_pengajuan), [
+                'tanggal_eksekusi' => now()->toDateString(),
+                'items' => [
+                    [
+                        'id_item_mutasi' => $itemMutasi->id_item_mutasi,
+                        'id_ruangan_tujuan' => $ruanganTujuan->id_ruangan,
+                    ],
+                ],
+            ])
+            ->assertStatus(422);
+    }
+
+    public function test_detail_pengajuan_mutasi_menampilkan_informasi_dan_rincian_lengkap(): void
+    {
+        $unit = Unit::query()->create(['nama_unit' => 'Departemen TI', 'jenis_unit' => 'departemen']);
+        $pemohon = $this->akun(PeranNama::PEMOHON, ['id_unit' => $unit->id_unit]);
+        $ruanganAsal = $this->buatRuangan('Lab Pemrograman', 'LAB-101', $unit);
+        $ruanganTujuan = $this->buatRuangan('Ruang Dosen TI', 'DSN-201', $unit);
+        $aset = $this->buatAsetAktif($ruanganAsal, $pemohon);
+
+        $keteranganParts = [
+            'Perihal: Pemindahan Komputer Dosen',
+            'Unit Pengusul: Departemen TI',
+            'Jenis Mutasi: Antarruangan dalam fakultas',
+            'Tanggal Usulan Pemindahan: 2026-11-25',
+            'Alasan & Manfaat: Kebutuhan persiapan akreditasi dan ruang dosen',
+        ];
+
+        $pengajuan = Pengajuan::query()->create([
+            'id_pemohon' => $pemohon->id_pengguna,
+            'nomor_pengajuan' => 'MTS-2026-0077',
+            'jenis_pengajuan' => 'mutasi',
+            'status' => 'diajukan',
+            'keterangan' => implode("\n", $keteranganParts),
+            'tanggal_pengajuan' => now(),
+        ]);
+
+        ItemMutasi::query()->create([
+            'id_pengajuan' => $pengajuan->id_pengajuan,
+            'id_aset' => $aset->id_aset,
+            'id_ruangan_tujuan' => $ruanganTujuan->id_ruangan,
+            'id_pengguna_pj' => $pemohon->id_pengguna,
+        ]);
+
+        $this->actingAs($pemohon)
+            ->get(route('pemohon.pengajuan.show', $pengajuan->id_pengajuan))
+            ->assertOk()
+            ->assertInertia(function ($page) use ($ruanganAsal, $ruanganTujuan, $aset) {
+                $p = $page->toArray()['props']['pengajuan'];
+                $this->assertEquals('mutasi', $p['jenis_pengajuan']);
+                $this->assertEquals(0, $p['total_estimasi']);
+                $this->assertNotNull($p['mutasi_meta']);
+                $this->assertEquals('Antarruangan dalam fakultas', $p['mutasi_meta']['jenis_mutasi']);
+                $this->assertEquals('2026-11-25', $p['mutasi_meta']['tanggal_mutasi']);
+
+                $item = $p['items'][0];
+                $this->assertEquals($aset->kode_aset, $item['kode_aset']);
+                $this->assertStringContainsString($ruanganAsal->nama_ruangan, $item['ruangan_asal']);
+                $this->assertStringContainsString($ruanganTujuan->nama_ruangan, $item['ruangan_tujuan']);
+                $this->assertEquals('Antarruangan dalam fakultas', $item['jenis_mutasi']);
+                $this->assertStringContainsString('akreditasi', $item['alasan_mutasi']);
+            });
+    }
+
+    public function test_pemeriksaan_index_operator_memuat_rincian_lengkap_dan_metadata_mutasi(): void
+    {
+        $unit = Unit::query()->create(['nama_unit' => 'Departemen SI', 'jenis_unit' => 'departemen']);
+        $pemohon = $this->akun(PeranNama::PEMOHON, ['id_unit' => $unit->id_unit]);
+        $operator = $this->akun(PeranNama::OPERATOR, ['id_unit' => $unit->id_unit]);
+        $ruanganAsal = $this->buatRuangan('Lab Sistem Informasi', 'LSI-101', $unit);
+        $ruanganTujuan = $this->buatRuangan('Ruang Riset Data', 'RRD-201', $unit);
+        $aset = $this->buatAsetAktif($ruanganAsal, $pemohon);
+
+        $keteranganParts = [
+            'Perihal: Pemindahan Server Lab',
+            'Unit Pengusul: Departemen SI',
+            'Jenis Mutasi: Antarruangan dalam fakultas',
+            'Tanggal Usulan Pemindahan: 2026-12-01',
+            'Alasan & Manfaat: Optimalisasi utilitas server dan pendingin ruangan',
+        ];
+
+        $pengajuan = Pengajuan::query()->create([
+            'id_pemohon' => $pemohon->id_pengguna,
+            'nomor_pengajuan' => 'MTS-2026-0099',
+            'jenis_pengajuan' => 'mutasi',
+            'status' => 'diajukan',
+            'keterangan' => implode("\n", $keteranganParts),
+            'tanggal_pengajuan' => now(),
+        ]);
+
+        ItemMutasi::query()->create([
+            'id_pengajuan' => $pengajuan->id_pengajuan,
+            'id_aset' => $aset->id_aset,
+            'id_ruangan_tujuan' => $ruanganTujuan->id_ruangan,
+            'id_pengguna_pj' => $pemohon->id_pengguna,
+        ]);
+
+        $this->actingAs($operator)
+            ->get(route('pemeriksaan.index', ['tab' => 'antrean']))
+            ->assertOk()
+            ->assertInertia(function ($page) use ($ruanganAsal, $ruanganTujuan, $aset) {
+                $daftar = $page->toArray()['props']['daftarPemeriksaan']['data'];
+                $this->assertNotEmpty($daftar);
+
+                $target = collect($daftar)->firstWhere('nomor_pengajuan', 'MTS-2026-0099');
+                $this->assertNotNull($target);
+                $this->assertEquals('mutasi', $target['jenis_pengajuan']);
+                $this->assertNotNull($target['items']);
+                $this->assertCount(1, $target['items']);
+
+                $item = $target['items'][0];
+                $this->assertEquals($aset->kode_aset, $item['kode_aset']);
+                $this->assertStringContainsString($ruanganAsal->nama_ruangan, $item['ruangan_asal']);
+                $this->assertStringContainsString($ruanganTujuan->nama_ruangan, $item['ruangan_tujuan']);
+                $this->assertEquals('Antarruangan dalam fakultas', $item['jenis_mutasi']);
+                $this->assertEquals('2026-12-01', $item['tanggal_mutasi']);
+                $this->assertStringContainsString('Optimalisasi', $item['alasan_mutasi']);
+            });
+    }
 }

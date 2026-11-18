@@ -44,4 +44,28 @@ class ItemMutasi extends Model
     {
         return $this->hasOne(PenempatanAset::class, 'id_item_mutasi', 'id_item_mutasi');
     }
+
+    public function ruanganAsal()
+    {
+        return $this->hasOneThrough(
+            Ruangan::class,
+            PenempatanAset::class,
+            'id_aset',
+            'id_ruangan',
+            'id_aset',
+            'id_ruangan'
+        )->whereNotNull('penempatan_aset.tanggal_selesai')->latest('penempatan_aset.id_penempatan');
+    }
+
+    public function penanggungJawabAsal()
+    {
+        return $this->hasOneThrough(
+            User::class,
+            PenempatanAset::class,
+            'id_aset',
+            'id_pengguna',
+            'id_aset',
+            'id_pengguna_pj'
+        )->whereNotNull('penempatan_aset.tanggal_selesai')->latest('penempatan_aset.id_penempatan');
+    }
 }

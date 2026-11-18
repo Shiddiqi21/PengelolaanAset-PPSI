@@ -32,6 +32,28 @@ function formatTanggal(tanggalString) {
     }
 }
 
+function ekstrakMutasiMeta(keterangan) {
+    if (!keterangan) {
+        return {
+            perihal: '-',
+            jenis_mutasi: 'Antarruangan dalam fakultas',
+            tanggal_mutasi: '-',
+            alasan_mutasi: '-',
+        };
+    }
+    const perihalMatch = keterangan.match(/^Perihal:\s*(.*)$/m);
+    const jenisMatch = keterangan.match(/^Jenis Mutasi:\s*(.*)$/m);
+    const tglMatch = keterangan.match(/^Tanggal Usulan Pemindahan:\s*(.*)$/m);
+    const alasanMatch = keterangan.match(/^Alasan & Manfaat:\s*([\s\S]*)$/m);
+
+    return {
+        perihal: perihalMatch ? perihalMatch[1].trim() : '-',
+        jenis_mutasi: jenisMatch ? jenisMatch[1].trim() : 'Antarruangan dalam fakultas',
+        tanggal_mutasi: tglMatch ? tglMatch[1].trim() : '-',
+        alasan_mutasi: alasanMatch ? alasanMatch[1].trim() : keterangan,
+    };
+}
+
 export default function MutasiIndex({
     antreanMutasi = [],
     riwayatMutasi,
@@ -367,11 +389,11 @@ export default function MutasiIndex({
 
                         <DataTable
                             kolom={[
-                                { header: 'Nomor & Tanggal', accessor: 'nomor' },
-                                { header: 'Pemohon / Unit', accessor: 'pemohon' },
-                                { header: 'Aset & Pemindahan', accessor: 'aset' },
-                                { header: 'Status', accessor: 'status' },
-                                { header: 'Aksi', accessor: 'aksi', align: 'right' },
+                                { judul: 'Nomor & Tanggal', header: 'Nomor & Tanggal', kunci: 'nomor' },
+                                { judul: 'Pemohon / Unit', header: 'Pemohon / Unit', kunci: 'pemohon' },
+                                { judul: 'Aset & Pemindahan', header: 'Aset & Pemindahan', kunci: 'aset' },
+                                { judul: 'Status', header: 'Status', kunci: 'status' },
+                                { judul: 'Aksi', header: 'Aksi', kunci: 'aksi', className: 'text-right' },
                             ]}
                             baris={(riwayatMutasi?.data || []).map((p) => ({
                                 id: p.id_pengajuan,
@@ -393,12 +415,12 @@ export default function MutasiIndex({
                                 ),
                                 aset: (
                                     <div className="space-y-1">
-                                        {(p.item_mutasi || []).map((it) => (
+                                        {(p.item_mutasi || p.itemMutasi || []).map((it) => (
                                             <div key={it.id_item_mutasi} className="text-xs">
                                                 <span className="font-semibold text-ink-900">{it.aset?.nama_barang}</span>
                                                 <span className="text-ink-500"> ({it.aset?.kode_aset})</span>
                                                 <div className="text-[11px] text-ink-600">
-                                                    {it.ruanganAsal?.nama_ruangan || 'Asal'} → <strong className="text-brand-700">{it.ruangan_tujuan?.nama_ruangan || 'Tujuan'}</strong>
+                                                    {it.ruanganAsal?.nama_ruangan || it.ruangan_asal?.nama_ruangan || 'Asal'} → <strong className="text-brand-700">{it.ruangan_tujuan?.nama_ruangan || it.ruanganTujuan?.nama_ruangan || 'Tujuan'}</strong>
                                                 </div>
                                             </div>
                                         ))}
@@ -434,6 +456,7 @@ export default function MutasiIndex({
                                     </button>
                                 ),
                             }))}
+                            kunciBaris="id"
                             kosong={
                                 <EmptyState
                                     judul="Data mutasi tidak ditemukan"
@@ -630,91 +653,262 @@ export default function MutasiIndex({
             <Modal
                 show={modalDetailBuka}
                 onClose={() => setModalDetailBuka(false)}
-                maxWidth="2xl"
+                maxWidth="3xl"
             >
-                {detailPengajuan && (
-                    <div className="p-6">
-                        <div className="flex items-center justify-between border-b border-line pb-3">
-                            <div>
-                                <Badge nada="sukses" className="mb-1">Mutasi Selesai</Badge>
-                                <h3 className="text-base font-bold text-ink-900">
-                                    Detail Mutasi — {detailPengajuan.nomor_pengajuan}
-                                </h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setModalDetailBuka(false)}
-                                className="text-ink-400 hover:text-ink-700"
-                            >
-                                ✕
-                            </button>
-                        </div>
+                {detailPengajuan && (() => {
+                    const meta = detailPengajuan.mutasi_meta || ekstrakMutasiMeta(detailPengajuan.keterangan);
+                    const items = detailPengajuan.item_mutasi || detailPengajuan.itemMutasi || [];
+                    const bastList = detailPengajuan.berita_acara || detailPengajuan.beritaAcara || [];
 
-                        <div className="mt-4 space-y-4 max-h-[65vh] overflow-y-auto text-xs">
-                            <InfoList
-                                item={[
-                                    { label: 'Pemohon', nilai: detailPengajuan.pemohon?.nama_lengkap || '-' },
-                                    { label: 'Unit pengusul', nilai: detailPengajuan.pemohon?.unit?.nama_unit || '-' },
-                                    { label: 'Tanggal usulan', nilai: formatTanggal(detailPengajuan.tanggal_pengajuan) },
-                                    { label: 'Status', nilai: 'Selesai' },
-                                ]}
-                            />
-
-                            <div className="border-t border-line pt-3">
-                                <p className="font-semibold uppercase tracking-wider text-ink-500 text-[11px] mb-2">
-                                    Daftar Aset Termutasi:
-                                </p>
-                                <div className="space-y-2">
-                                    {(detailPengajuan.item_mutasi || []).map((it) => (
-                                        <div key={it.id_item_mutasi} className="rounded-lg border border-line p-3 bg-surface/50">
-                                            <p className="font-bold text-ink-900">{it.aset?.nama_barang}</p>
-                                            <p className="text-ink-500">{it.aset?.kode_aset} • {it.aset?.kategori?.nama_kategori}</p>
-                                            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] border-t border-line pt-2">
-                                                <div>
-                                                    <span className="text-ink-400">Asal:</span>
-                                                    <p className="font-medium text-ink-800">{it.ruanganAsal?.nama_ruangan || '-'}</p>
-                                                </div>
-                                                <div>
-                                                    <span className="text-ink-400">Tujuan Akhir:</span>
-                                                    <p className="font-semibold text-brand-700">{it.ruangan_tujuan?.nama_ruangan || '-'}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {detailPengajuan.dokumen && detailPengajuan.dokumen.length > 0 && (
-                                <div className="border-t border-line pt-3">
-                                    <p className="font-semibold uppercase tracking-wider text-ink-500 text-[11px] mb-1">
-                                        Dokumen Terlampir:
+                    return (
+                        <div className="p-6">
+                            <div className="flex items-center justify-between border-b border-line pb-4">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Badge nada="sukses">Mutasi Selesai</Badge>
+                                        <Badge nada={meta.jenis_mutasi?.toLowerCase().includes('antar') ? 'info' : 'netral'}>
+                                            {meta.jenis_mutasi}
+                                        </Badge>
+                                    </div>
+                                    <h3 className="text-lg font-bold text-ink-900">
+                                        Detail Mutasi — {detailPengajuan.nomor_pengajuan}
+                                    </h3>
+                                    <p className="text-xs text-ink-500">
+                                        Diajukan pada {formatTanggal(detailPengajuan.tanggal_pengajuan)} oleh{' '}
+                                        <span className="font-semibold text-ink-700">
+                                            {detailPengajuan.pemohon?.nama_lengkap ?? '-'}
+                                        </span>
                                     </p>
-                                    <ul className="divide-y divide-line rounded border border-line">
-                                        {detailPengajuan.dokumen.map((doc) => (
-                                            <li key={doc.id_dokumen} className="flex items-center justify-between p-2">
-                                                <span>📎 {doc.nama_file}</span>
-                                                <a
-                                                    href={route('dokumen.unduh', doc.id_dokumen)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="font-semibold text-brand-600 hover:underline"
-                                                >
-                                                    Unduh
-                                                </a>
-                                            </li>
-                                        ))}
-                                    </ul>
                                 </div>
-                            )}
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setModalDetailBuka(false)}
+                                    className="text-ink-400 hover:text-ink-700 text-lg"
+                                >
+                                    ✕
+                                </button>
+                            </div>
 
-                        <div className="mt-6 flex justify-end border-t border-line pt-3">
-                            <SecondaryButton type="button" onClick={() => setModalDetailBuka(false)}>
-                                Tutup
-                            </SecondaryButton>
+                            <div className="mt-4 space-y-4 max-h-[72vh] overflow-y-auto pr-1 text-xs">
+                                {/* Ringkasan Informasi Usulan */}
+                                <div className="rounded-lg border border-line bg-surface/40 p-3.5 space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div>
+                                            <span className="text-ink-500">Pemohon / PIC Usulan:</span>
+                                            <p className="font-semibold text-ink-800 mt-0.5">
+                                                {detailPengajuan.pemohon?.nama_lengkap ?? '-'}
+                                            </p>
+                                            <p className="text-[11px] text-ink-500">
+                                                NIP: {detailPengajuan.pemohon?.nip ?? '-'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-ink-500">Unit Pengusul:</span>
+                                            <p className="font-semibold text-ink-800 mt-0.5">
+                                                {detailPengajuan.pemohon?.unit?.nama_unit ?? 'Fakultas Teknologi Informasi'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-ink-500">Jenis Mutasi:</span>
+                                            <p className="font-semibold text-brand-700 mt-0.5">
+                                                {meta.jenis_mutasi}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-ink-500">Tanggal Usulan Pemindahan:</span>
+                                            <p className="font-semibold text-ink-800 mt-0.5">
+                                                {formatTanggal(meta.tanggal_mutasi)}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Alasan Mutasi */}
+                                    <div className="border-t border-line/60 pt-2.5">
+                                        <span className="text-ink-500 font-medium">Alasan & Manfaat Pemindahan:</span>
+                                        <p className="mt-1 whitespace-pre-line text-ink-700 bg-white p-2.5 rounded border border-line text-[11px] leading-relaxed">
+                                            {meta.alasan_mutasi || '-'}
+                                        </p>
+                                    </div>
+
+                                    {/* Status BAST */}
+                                    <div className="border-t border-line/60 pt-2.5 flex items-center justify-between">
+                                        <span className="text-ink-500">Berita Acara Serah Terima (BAST):</span>
+                                        {bastList.length > 0 ? (
+                                            <a
+                                                href={route('bast.index', { q: bastList[0].nomor_bast })}
+                                                className="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline"
+                                            >
+                                                <Badge nada="sukses">{bastList[0].nomor_bast}</Badge>
+                                                <span>Lihat arsip BAST &rarr;</span>
+                                            </a>
+                                        ) : (
+                                            <a
+                                                href={route('bast.index')}
+                                                className="text-xs text-ink-500 hover:text-brand-700 font-medium"
+                                            >
+                                                + Susun BAST Mutasi
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Rincian Aset Termutasi */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="font-bold text-ink-900 uppercase tracking-wider text-[11px]">
+                                            Rincian Aset & Pemindahan Lokasi ({items.length} unit aset):
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {items.map((it, idx) => {
+                                            const ruanganAsal = it.ruanganAsal || it.ruangan_asal;
+                                            const gedungAsal = ruanganAsal?.gedung?.nama_gedung;
+                                            const namaRuanganAsal = ruanganAsal?.nama_ruangan || '-';
+                                            const labelLokasiAsal = gedungAsal ? `${gedungAsal} — ${namaRuanganAsal}` : namaRuanganAsal;
+
+                                            const ruanganTujuan = it.ruangan_tujuan || it.ruanganTujuan;
+                                            const gedungTujuan = ruanganTujuan?.gedung?.nama_gedung;
+                                            const namaRuanganTujuan = ruanganTujuan?.nama_ruangan || '-';
+                                            const labelLokasiTujuan = gedungTujuan ? `${gedungTujuan} — ${namaRuanganTujuan}` : namaRuanganTujuan;
+
+                                            const pjAsal = it.penanggungJawabAsal || it.penanggung_jawab_asal;
+                                            const pjTujuan = it.penanggung_jawab_tujuan || it.penanggungJawabTujuan || it.penanggungJawabBaru;
+
+                                            return (
+                                                <div
+                                                    key={it.id_item_mutasi || idx}
+                                                    className="rounded-lg border border-line bg-white shadow-xs overflow-hidden"
+                                                >
+                                                    {/* Header Item Aset */}
+                                                    <div className="bg-surface/70 px-4 py-2.5 border-b border-line flex flex-wrap items-center justify-between gap-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-800">
+                                                                {idx + 1}
+                                                            </span>
+                                                            <div>
+                                                                <span className="font-bold text-ink-900 text-sm">
+                                                                    {it.aset?.nama_barang ?? 'Aset'}
+                                                                </span>
+                                                                <span className="font-mono text-ink-500 ml-2">
+                                                                    ({it.aset?.kode_aset ?? '-'})
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[11px] text-ink-500">
+                                                                {it.aset?.kategori?.nama_kategori ?? 'Kategori Umum'}
+                                                            </span>
+                                                            <Badge nada={it.aset?.kondisi === 'rusak_berat' ? 'bahaya' : 'sukses'}>
+                                                                {it.aset?.kondisi ? `Kondisi: ${it.aset.kondisi.replace('_', ' ')}` : 'Aktif'}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Rincian Pemindahan Asal -> Tujuan */}
+                                                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {/* Asal */}
+                                                        <div className="rounded-md border border-line/80 bg-surface/30 p-3 space-y-2">
+                                                            <div className="flex items-center gap-1.5 text-ink-500 font-semibold uppercase tracking-wider text-[10px]">
+                                                                <span>📍</span>
+                                                                <span>Lokasi & PJ Asal</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[11px] text-ink-500">Ruangan & Gedung:</span>
+                                                                <p className="font-semibold text-ink-800 mt-0.5">
+                                                                    {labelLokasiAsal}
+                                                                </p>
+                                                                {ruanganAsal?.nomor_ruangan && (
+                                                                    <p className="text-[11px] text-ink-500">
+                                                                        No. Ruangan: {ruanganAsal.nomor_ruangan}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <div className="border-t border-line/60 pt-2">
+                                                                <span className="text-[11px] text-ink-500">Penanggung Jawab Asal:</span>
+                                                                <p className="font-semibold text-ink-800 mt-0.5">
+                                                                    {pjAsal?.nama_lengkap ?? '-'}
+                                                                </p>
+                                                                {pjAsal?.nip && (
+                                                                    <p className="text-[11px] text-ink-500">
+                                                                        NIP: {pjAsal.nip}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Tujuan */}
+                                                        <div className="rounded-md border border-brand-200 bg-brand-50/40 p-3 space-y-2">
+                                                            <div className="flex items-center gap-1.5 text-brand-700 font-semibold uppercase tracking-wider text-[10px]">
+                                                                <span>➡️</span>
+                                                                <span>Lokasi & PJ Tujuan</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[11px] text-ink-500">Ruangan & Gedung Tujuan:</span>
+                                                                <p className="font-bold text-brand-800 mt-0.5">
+                                                                    {labelLokasiTujuan}
+                                                                </p>
+                                                                {ruanganTujuan?.nomor_ruangan && (
+                                                                    <p className="text-[11px] text-ink-500">
+                                                                        No. Ruangan: {ruanganTujuan.nomor_ruangan}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <div className="border-t border-brand-200/60 pt-2">
+                                                                <span className="text-[11px] text-ink-500">Penanggung Jawab Baru:</span>
+                                                                <p className="font-bold text-brand-800 mt-0.5">
+                                                                    {pjTujuan?.nama_lengkap ?? 'Tetap / Mengikuti ruangan'}
+                                                                </p>
+                                                                {pjTujuan?.nip && (
+                                                                    <p className="text-[11px] text-brand-700">
+                                                                        NIP: {pjTujuan.nip}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Dokumen Terlampir */}
+                                {detailPengajuan.dokumen && detailPengajuan.dokumen.length > 0 && (
+                                    <div className="border-t border-line pt-3">
+                                        <p className="font-semibold uppercase tracking-wider text-ink-500 text-[11px] mb-2">
+                                            Dokumen Pendukung Terlampir:
+                                        </p>
+                                        <ul className="divide-y divide-line rounded-lg border border-line bg-white">
+                                            {detailPengajuan.dokumen.map((doc) => (
+                                                <li key={doc.id_dokumen} className="flex items-center justify-between p-2.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-ink-400">📎</span>
+                                                        <span className="font-medium text-ink-800">{doc.nama_file}</span>
+                                                    </div>
+                                                    <a
+                                                        href={route('dokumen.unduh', doc.id_dokumen)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="font-semibold text-brand-600 hover:text-brand-800 hover:underline"
+                                                    >
+                                                        Unduh berkas
+                                                    </a>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-6 flex justify-end border-t border-line pt-4">
+                                <SecondaryButton type="button" onClick={() => setModalDetailBuka(false)}>
+                                    Tutup
+                                </SecondaryButton>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </Modal>
         </AuthenticatedLayout>
     );

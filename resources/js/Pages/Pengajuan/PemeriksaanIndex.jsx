@@ -35,6 +35,12 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
     const [targetPengajuan, setTargetPengajuan] = useState(null);
     const isFirstRender = useRef(true);
 
+    useEffect(() => {
+        if (detailAktif) {
+            bukaModalPemeriksaan(detailAktif);
+        }
+    }, [detailAktif]);
+
     const timelineItems = (targetPengajuan?.riwayat || []).map((r) => {
         const isSelesai = ['disetujui_pimpinan', 'selesai', 'disetujui_kadep'].includes(r.status_baru);
 
@@ -158,7 +164,11 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
         {
             judul: 'Estimasi Nilai',
             render: (b) => (
-                <span className="font-medium text-ink-900">{formatRupiah(b.total_estimasi)}</span>
+                b.jenis_pengajuan === 'mutasi' || b.jenis_pengajuan === 'penghapusan' ? (
+                    <span className="text-xs text-ink-500">Non-anggaran</span>
+                ) : (
+                    <span className="font-medium text-ink-900">{formatRupiah(b.total_estimasi)}</span>
+                )
             ),
         },
         {
@@ -293,7 +303,7 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
             {/* Modal Pemeriksaan Berkas */}
             <Modal show={modalBuka} onClose={tutupModal} maxWidth="2xl">
                 {targetPengajuan && (
-                    <div className="p-6">
+                    <div className="max-h-[85vh] overflow-y-auto p-6">
                         <div className="flex items-start justify-between border-b border-line pb-4">
                             <div>
                                 <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
@@ -315,9 +325,189 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
                             <div className="rounded-lg border border-line bg-surface p-4 text-xs leading-relaxed text-ink-900">
                                 <p className="font-semibold text-ink-600">Perihal / Keterangan Usulan:</p>
                                 <p className="mt-1">{targetPengajuan.keterangan_singkat}</p>
-                                <p className="mt-2 font-semibold text-brand-700">
-                                    Total Estimasi: {formatRupiah(targetPengajuan.total_estimasi)}
-                                </p>
+                                {targetPengajuan.jenis_pengajuan === 'mutasi' ? (
+                                    <p className="mt-2 text-xs font-semibold text-brand-700">
+                                        Jenis: Pengajuan Mutasi Aset (Non-anggaran)
+                                    </p>
+                                ) : targetPengajuan.jenis_pengajuan === 'penghapusan' ? (
+                                    <p className="mt-2 text-xs font-semibold text-brand-700">
+                                        Jenis: Pengajuan Penghapusan Aset (Nilai Buku: {formatRupiah(targetPengajuan.total_nilai_perolehan || 0)})
+                                    </p>
+                                ) : (
+                                    <p className="mt-2 font-semibold text-brand-700">
+                                        Total Estimasi: {formatRupiah(targetPengajuan.total_estimasi)}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Rincian Objek Usulan */}
+                            <div className="rounded-lg border border-line p-3.5 bg-white">
+                                <div className="mb-3 flex items-center justify-between border-b border-line pb-2">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink-700">
+                                        {targetPengajuan.jenis_pengajuan === 'mutasi'
+                                            ? `Rincian Objek Usulan Mutasi (${targetPengajuan.items?.length || 0} Aset)`
+                                            : targetPengajuan.jenis_pengajuan === 'pengadaan'
+                                            ? `Rincian Barang yang Diusulkan (${targetPengajuan.items?.length || 0} Item)`
+                                            : targetPengajuan.jenis_pengajuan === 'perbaikan'
+                                            ? `Rincian Aset yang Memerlukan Perbaikan (${targetPengajuan.items?.length || 0} Aset)`
+                                            : targetPengajuan.jenis_pengajuan === 'penghapusan'
+                                            ? `Rincian Aset yang Diusulkan Dihapus (${targetPengajuan.items?.length || 0} Aset)`
+                                            : `Rincian Objek Usulan (${targetPengajuan.items?.length || 0})`}
+                                    </h4>
+                                    {targetPengajuan.jenis_pengajuan === 'mutasi' && targetPengajuan.mutasi_meta?.jenis_mutasi && (
+                                        <span className="rounded bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
+                                            {targetPengajuan.mutasi_meta.jenis_mutasi}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {(!targetPengajuan.items || targetPengajuan.items.length === 0) ? (
+                                    <p className="py-2 text-xs text-ink-400">Tidak ada rincian objek/barang yang tercatat.</p>
+                                ) : targetPengajuan.jenis_pengajuan === 'mutasi' ? (
+                                    <div className="space-y-3">
+                                        {targetPengajuan.items.map((item, idx) => (
+                                            <div key={item.id || idx} className="rounded-lg border border-line bg-surface/60 p-3 text-xs">
+                                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 pb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700">
+                                                            {idx + 1}
+                                                        </span>
+                                                        <span className="font-semibold text-ink-900">{item.nama_barang}</span>
+                                                        {item.kode_aset && item.kode_aset !== '-' && (
+                                                            <span className="rounded border border-line bg-white px-1.5 py-0.5 font-mono text-[11px] text-ink-600">
+                                                                {item.kode_aset}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <Badge nada="info">{item.kategori || 'Mutasi'}</Badge>
+                                                </div>
+
+                                                <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                    <div className="rounded border border-line/60 bg-white p-2">
+                                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-400">Lokasi & PJ Asal</p>
+                                                        <p className="mt-1 font-medium text-ink-900">{item.ruangan_asal || '-'}</p>
+                                                        <p className="text-[11px] text-ink-600">PJ: {item.pj_asal || '-'}</p>
+                                                    </div>
+                                                    <div className="rounded border border-brand-200 bg-brand-50/40 p-2">
+                                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-700">Lokasi & PJ Tujuan</p>
+                                                        <p className="mt-1 font-medium text-brand-900">{item.ruangan_tujuan || '-'}</p>
+                                                        <p className="text-[11px] text-brand-700">PJ: {item.pj_tujuan || '-'}</p>
+                                                    </div>
+                                                </div>
+
+                                                {(item.tanggal_mutasi || item.alasan_mutasi) && (
+                                                    <div className="mt-2 flex flex-col gap-1 border-t border-line/40 pt-2 text-[11px] text-ink-600">
+                                                        {item.tanggal_mutasi && item.tanggal_mutasi !== '-' && (
+                                                            <p><span className="font-semibold text-ink-700">Usulan Pemindahan:</span> {item.tanggal_mutasi}</p>
+                                                        )}
+                                                        {item.alasan_mutasi && item.alasan_mutasi !== '-' && (
+                                                            <p><span className="font-semibold text-ink-700">Alasan:</span> {item.alasan_mutasi}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : targetPengajuan.jenis_pengajuan === 'pengadaan' ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead>
+                                                <tr className="border-b border-line text-ink-500">
+                                                    <th className="pb-1.5 font-semibold">No</th>
+                                                    <th className="pb-1.5 font-semibold">Nama Barang & Spesifikasi</th>
+                                                    <th className="pb-1.5 font-semibold text-center">Jumlah</th>
+                                                    <th className="pb-1.5 font-semibold text-right">Estimasi Satuan</th>
+                                                    <th className="pb-1.5 font-semibold text-right">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-line/60">
+                                                {targetPengajuan.items.map((item, idx) => (
+                                                    <tr key={item.id || idx}>
+                                                        <td className="py-2 text-ink-500">{idx + 1}</td>
+                                                        <td className="py-2">
+                                                            <p className="font-medium text-ink-900">{item.nama_barang}</p>
+                                                            <p className="text-[11px] text-ink-500">{item.spesifikasi || '-'}</p>
+                                                            {item.kategori && (
+                                                                <span className="mt-0.5 inline-block text-[10px] text-ink-400">
+                                                                    Kategori: {item.kategori}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-2 text-center font-medium text-ink-900">{item.jumlah} unit</td>
+                                                        <td className="py-2 text-right text-ink-600">{formatRupiah(item.harga_satuan)}</td>
+                                                        <td className="py-2 text-right font-medium text-ink-900">{formatRupiah(item.subtotal)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : targetPengajuan.jenis_pengajuan === 'perbaikan' ? (
+                                    <div className="space-y-2.5">
+                                        {targetPengajuan.items.map((item, idx) => (
+                                            <div key={item.id || idx} className="rounded-lg border border-line bg-surface/50 p-2.5 text-xs">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <span className="font-semibold text-ink-900">{item.nama_barang}</span>
+                                                        {item.kode_aset && item.kode_aset !== '-' && (
+                                                            <span className="ml-2 font-mono text-[11px] text-ink-500">({item.kode_aset})</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="font-semibold text-brand-700">
+                                                        {formatRupiah(item.estimasi_biaya || item.subtotal)}
+                                                    </span>
+                                                </div>
+                                                <p className="mt-1 text-[11px] text-ink-600">
+                                                    <span className="font-semibold text-ink-700">Gejala Kerusakan:</span> {item.spesifikasi || item.deskripsi_kerusakan || '-'}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : targetPengajuan.jenis_pengajuan === 'penghapusan' ? (
+                                    <div className="space-y-2.5">
+                                        {targetPengajuan.items.map((item, idx) => (
+                                            <div key={item.id || idx} className="rounded-lg border border-line bg-surface/50 p-2.5 text-xs">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <span className="font-semibold text-ink-900">{item.nama_barang}</span>
+                                                        {item.kode_aset && item.kode_aset !== '-' && (
+                                                            <span className="ml-2 font-mono text-[11px] text-ink-500">({item.kode_aset})</span>
+                                                        )}
+                                                    </div>
+                                                    {item.jalur_penghapusan && (
+                                                        <Badge nada="peringatan">
+                                                            {item.jalur_penghapusan.replace('_', ' ')}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <p className="mt-1 text-[11px] text-ink-600">
+                                                    <span className="font-semibold text-ink-700">Keterangan:</span> {item.spesifikasi || '-'}
+                                                </p>
+                                                {item.pihak_penerima && (
+                                                    <p className="text-[11px] text-ink-600">
+                                                        <span className="font-semibold text-ink-700">Penerima/Mitra:</span> {item.pihak_penerima}
+                                                    </p>
+                                                )}
+                                                {item.nilai_penjualan > 0 && (
+                                                    <p className="text-[11px] font-semibold text-brand-700">
+                                                        Nilai Penjualan: {formatRupiah(item.nilai_penjualan)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {targetPengajuan.items.map((item, idx) => (
+                                            <div key={item.id || idx} className="flex items-center justify-between border-b border-line/50 py-1.5 text-xs">
+                                                <div>
+                                                    <p className="font-medium text-ink-900">{item.nama_barang}</p>
+                                                    <p className="text-[11px] text-ink-500">{item.spesifikasi || '-'}</p>
+                                                </div>
+                                                <span className="font-semibold text-ink-900">{item.jumlah || 1} unit</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Dokumen Terlampir */}

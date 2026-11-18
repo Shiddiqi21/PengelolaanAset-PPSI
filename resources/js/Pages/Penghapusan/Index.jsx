@@ -147,9 +147,10 @@ export default function PenghapusanIndex({
         setModalDetailBuka(true);
     };
 
-    // Columns tabel riwayat
+    // Kolom tabel riwayat
     const kolomRiwayat = [
         {
+            judul: 'Pengajuan',
             header: 'Pengajuan',
             render: (row) => (
                 <div>
@@ -159,6 +160,7 @@ export default function PenghapusanIndex({
             ),
         },
         {
+            judul: 'Pemohon / Unit',
             header: 'Pemohon / Unit',
             render: (row) => (
                 <div>
@@ -168,6 +170,7 @@ export default function PenghapusanIndex({
             ),
         },
         {
+            judul: 'Aset yang Dihapus',
             header: 'Aset yang Dihapus',
             render: (row) => {
                 const items = row.item_penghapusan || row.itemPenghapusan || [];
@@ -184,6 +187,7 @@ export default function PenghapusanIndex({
             },
         },
         {
+            judul: 'Jalur Eksekusi',
             header: 'Jalur Eksekusi',
             render: (row) => {
                 const itemPertama = (row.item_penghapusan || row.itemPenghapusan || [])[0];
@@ -191,6 +195,7 @@ export default function PenghapusanIndex({
             },
         },
         {
+            judul: 'Penerima / Nilai',
             header: 'Penerima / Nilai',
             render: (row) => {
                 const itemPertama = (row.item_penghapusan || row.itemPenghapusan || [])[0];
@@ -206,6 +211,7 @@ export default function PenghapusanIndex({
             },
         },
         {
+            judul: 'Status BAST',
             header: 'Status BAST',
             render: (row) => {
                 const bastList = row.berita_acara || row.beritaAcara || [];
@@ -232,15 +238,19 @@ export default function PenghapusanIndex({
             },
         },
         {
+            judul: 'Aksi',
             header: 'Aksi',
+            className: 'text-right',
             render: (row) => (
-                <SecondaryButton
-                    type="button"
-                    onClick={() => handleBukaDetail(row)}
-                    className="text-xs"
-                >
-                    Lihat detail
-                </SecondaryButton>
+                <div className="flex justify-end">
+                    <SecondaryButton
+                        type="button"
+                        onClick={() => handleBukaDetail(row)}
+                        className="text-xs"
+                    >
+                        Lihat detail
+                    </SecondaryButton>
+                </div>
             ),
         },
     ];
@@ -463,9 +473,10 @@ export default function PenghapusanIndex({
                             </div>
 
                             <DataTable
-                                columns={kolomRiwayat}
-                                data={riwayatPenghapusan?.data || []}
-                                emptyState={
+                                kolom={kolomRiwayat}
+                                baris={riwayatPenghapusan?.data || []}
+                                kunciBaris="id_pengajuan"
+                                kosong={
                                     <EmptyState
                                         judul="Belum ada riwayat penghapusan"
                                         deskripsi="Belum ada pengajuan penghapusan aset yang telah diselesaikan eksekusinya."

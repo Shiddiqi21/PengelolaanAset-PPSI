@@ -154,7 +154,19 @@ class PengajuanController extends Controller
         }
 
         $query = Pengajuan::query()
-            ->with(['pemohon.unit', 'itemPengadaan', 'itemPerbaikan', 'itemMutasi', 'itemPenghapusan', 'dokumen', 'riwayatStatus.pengguna.peran'])
+            ->with([
+                'pemohon.unit',
+                'itemPengadaan.kategori',
+                'itemPerbaikan.aset.kategori',
+                'itemMutasi.aset.kategori',
+                'itemMutasi.aset.penempatanAktif.ruangan.gedung',
+                'itemMutasi.aset.penempatanAktif.penanggungJawab',
+                'itemMutasi.ruanganTujuan.gedung',
+                'itemMutasi.penanggungJawabTujuan',
+                'itemPenghapusan.aset.kategori',
+                'dokumen',
+                'riwayatStatus.pengguna.peran',
+            ])
             ->where('status', '!=', 'draft')
             ->orderByDesc('tanggal_pengajuan');
 
@@ -208,6 +220,11 @@ class PengajuanController extends Controller
                     'pengguna_peran' => $r->pengguna?->peran?->nama_peran ?? '-',
                 ]);
 
+            $mutasiMeta = $p->jenis_pengajuan === 'mutasi' ? $this->ekstrakMutasiMeta($p) : null;
+            $penghapusanMeta = $p->jenis_pengajuan === 'penghapusan' ? $this->ekstrakPenghapusanMeta($p) : null;
+            $items = $this->formatItemsByJenis($p, $mutasiMeta);
+            $totalNilaiPerolehan = $p->jenis_pengajuan === 'penghapusan' ? (float) $items->sum('harga_perolehan') : 0.0;
+
             return [
                 'id_pengajuan' => $p->id_pengajuan,
                 'nomor_pengajuan' => $p->nomor_pengajuan,
@@ -217,10 +234,15 @@ class PengajuanController extends Controller
                 'unit_nama' => $p->pemohon?->unit?->nama_unit ?? '-',
                 'tanggal_pengajuan' => $p->tanggal_pengajuan?->format('d M Y') ?? '-',
                 'keterangan_singkat' => $this->ambilPerihal($p->keterangan),
+                'keterangan' => $p->keterangan ?? '-',
                 'total_estimasi' => $totalEstimasi,
+                'total_nilai_perolehan' => $totalNilaiPerolehan,
                 'sudah_diperiksa_operator' => $sudahDiperiksaOperator,
                 'bisa_diperiksa' => $bisaDiperiksa,
                 'catatan_operator' => $catatanOperator,
+                'items' => $items,
+                'mutasi_meta' => $mutasiMeta,
+                'penghapusan_meta' => $penghapusanMeta,
                 'dokumen' => $p->dokumen->map(fn ($d) => [
                     'id_dokumen' => $d->id_dokumen,
                     'nama_file' => $d->nama_file,
@@ -661,7 +683,7 @@ class PengajuanController extends Controller
             'dokumen.pengunggah',
             'riwayatStatus.pengguna.peran',
             'itemPengadaan.kategori',
-            'itemPerbaikan.aset',
+            'itemPerbaikan.aset.kategori',
             'itemMutasi.aset.kategori',
             'itemMutasi.aset.penempatanAktif.ruangan.gedung',
             'itemMutasi.aset.penempatanAktif.penanggungJawab',
@@ -674,73 +696,12 @@ class PengajuanController extends Controller
         $isRevisi = $pengajuan->is_revisi;
         $meta = self::getStatusMeta($pengajuan->status, $isRevisi);
 
-        // Format item berdasarkan jenis pengajuan
-        $items = match ($pengajuan->jenis_pengajuan) {
-            'pengadaan' => $pengajuan->itemPengadaan->map(fn ($item) => [
-                'id' => $item->id_item_pengadaan,
-                'kategori' => $item->kategori?->nama_kategori ?? '-',
-                'nama_barang' => $item->nama_barang,
-                'spesifikasi' => $item->spesifikasi,
-                'jumlah' => $item->jumlah,
-                'harga_satuan' => $item->jumlah > 0 ? (float) $item->estimasi_anggaran / $item->jumlah : (float) $item->estimasi_anggaran,
-                'subtotal' => (float) $item->estimasi_anggaran,
-            ])->values(),
-            'perbaikan' => $pengajuan->itemPerbaikan->map(fn ($item) => [
-                'id' => $item->id_item_perbaikan,
-                'kategori' => 'Perbaikan Aset',
-                'nama_barang' => $item->aset?->nama_barang ?? "Aset #{$item->id_aset}",
-                'spesifikasi' => $item->deskripsi_kerusakan,
-                'jumlah' => 1,
-                'harga_satuan' => (float) $item->estimasi_biaya,
-                'subtotal' => (float) $item->estimasi_biaya,
-            ])->values(),
-            'mutasi' => $pengajuan->itemMutasi->map(function ($item) {
-                $penempatanAktif = $item->aset?->penempatanAktif;
-                $ruanganAsal = $penempatanAktif?->ruangan?->nama_ruangan ?? '-';
-                $ruanganTujuan = $item->ruanganTujuan?->nama_ruangan ?? '-';
-                $pjAsal = $penempatanAktif?->penanggungJawab?->nama_lengkap ?? '-';
-                $pjTujuan = $item->penanggungJawabTujuan?->nama_lengkap ?? '-';
+        $mutasiMeta = $pengajuan->jenis_pengajuan === 'mutasi' ? $this->ekstrakMutasiMeta($pengajuan) : null;
+        $penghapusanMeta = $pengajuan->jenis_pengajuan === 'penghapusan' ? $this->ekstrakPenghapusanMeta($pengajuan) : null;
+        $items = $this->formatItemsByJenis($pengajuan, $mutasiMeta);
 
-                return [
-                    'id' => $item->id_item_mutasi,
-                    'kategori' => $item->aset?->kategori?->nama_kategori ?? 'Mutasi Aset',
-                    'nama_barang' => $item->aset ? "{$item->aset->nama_barang} ({$item->aset->kode_aset})" : "Aset #{$item->id_aset}",
-                    'spesifikasi' => "Dari: {$ruanganAsal} (PJ: {$pjAsal}) → Tujuan: {$ruanganTujuan} (PJ: {$pjTujuan})",
-                    'jumlah' => 1,
-                    'harga_satuan' => 0,
-                    'subtotal' => 0,
-                    'ruangan_asal' => $ruanganAsal,
-                    'ruangan_tujuan' => $ruanganTujuan,
-                    'pj_asal' => $pjAsal,
-                    'pj_tujuan' => $pjTujuan,
-                ];
-            })->values(),
-            'penghapusan' => $pengajuan->itemPenghapusan->map(function ($item) {
-                $aset = $item->aset;
-                $spesifikasi = $item->jalur_penghapusan
-                    ? "Jalur: {$item->jalur_penghapusan}" . ($item->pihak_penerima ? " (Penerima: {$item->pihak_penerima})" : '') . ($item->catatan_tim_penilai ? " — {$item->catatan_tim_penilai}" : '')
-                    : ("Kondisi: " . ucfirst($aset?->kondisi ?? 'rusak_berat') . ($aset?->tahun_perolehan ? " • Tahun: {$aset->tahun_perolehan}" : ''));
-
-                return [
-                    'id' => $item->id_item_penghapusan,
-                    'kategori' => $aset?->kategori?->nama_kategori ?? 'Penghapusan Aset',
-                    'nama_barang' => $aset ? "{$aset->nama_barang} ({$aset->kode_aset})" : "Aset #{$item->id_aset}",
-                    'spesifikasi' => $spesifikasi,
-                    'jumlah' => 1,
-                    'harga_satuan' => (float) ($item->nilai_penjualan ?? $aset?->harga_perolehan ?? 0),
-                    'subtotal' => (float) ($item->nilai_penjualan ?? 0),
-                    'kode_aset' => $aset?->kode_aset,
-                    'kondisi' => $aset?->kondisi,
-                    'tahun_perolehan' => $aset?->tahun_perolehan,
-                    'harga_perolehan' => (float) ($aset?->harga_perolehan ?? 0),
-                    'jalur_penghapusan' => $item->jalur_penghapusan,
-                    'pihak_penerima' => $item->pihak_penerima,
-                ];
-            })->values(),
-            default => collect(),
-        };
-
-        $totalEstimasi = $items->sum('subtotal');
+        $totalEstimasi = $pengajuan->jenis_pengajuan === 'penghapusan' ? 0.0 : $items->sum('subtotal');
+        $totalNilaiPerolehan = $pengajuan->jenis_pengajuan === 'penghapusan' ? (float) $items->sum('harga_perolehan') : 0.0;
 
         $dokumen = $pengajuan->dokumen->map(fn ($d) => [
             'id_dokumen' => $d->id_dokumen,
@@ -820,7 +781,10 @@ class PengajuanController extends Controller
                 'sub_unit_nama' => $pengajuan->pemohon?->subUnit?->nama_sub_unit,
             ],
             'items' => $items,
+            'mutasi_meta' => $mutasiMeta,
+            'penghapusan_meta' => $penghapusanMeta,
             'total_estimasi' => $totalEstimasi,
+            'total_nilai_perolehan' => $totalNilaiPerolehan,
             'dokumen' => $dokumen,
             'riwayat' => $riwayat,
             'catatan_operator' => $pemeriksaanOperator?->catatan,
@@ -837,7 +801,7 @@ class PengajuanController extends Controller
         return match ($p->jenis_pengajuan) {
             'pengadaan' => (float) $p->itemPengadaan->sum('estimasi_anggaran'),
             'perbaikan' => (float) $p->itemPerbaikan->sum('estimasi_biaya'),
-            'penghapusan' => (float) $p->itemPenghapusan->sum('nilai_penjualan'),
+            'penghapusan' => 0.0,
             default => 0.0,
         };
     }
@@ -859,6 +823,164 @@ class PengajuanController extends Controller
         }
 
         return $lines[0] ?: '-';
+    }
+
+    /**
+     * Ekstraksi metadata mutasi dari teks keterangan terstruktur jika jenis mutasi.
+     *
+     * @return array{perihal: string, jenis_mutasi: string, tanggal_mutasi: string, alasan_mutasi: string}|null
+     */
+    public function ekstrakMutasiMeta(Pengajuan $pengajuan): ?array
+    {
+        if ($pengajuan->jenis_pengajuan !== 'mutasi') {
+            return null;
+        }
+
+        $jenisMutasi = 'Antarruangan dalam fakultas';
+        if (preg_match('/^Jenis Mutasi:\s*(.*)$/m', $pengajuan->keterangan ?? '', $m)) {
+            $jenisMutasi = trim($m[1]);
+        }
+        $tanggalMutasi = '-';
+        if (preg_match('/^Tanggal Usulan Pemindahan:\s*(.*)$/m', $pengajuan->keterangan ?? '', $m)) {
+            $tanggalMutasi = trim($m[1]);
+        }
+        $alasanMutasi = '';
+        if (preg_match('/^Alasan & Manfaat:\s*(.*)$/ms', $pengajuan->keterangan ?? '', $m)) {
+            $alasanMutasi = trim($m[1]);
+        } else {
+            $alasanMutasi = $pengajuan->keterangan ?? '-';
+        }
+
+        return [
+            'perihal' => $this->ambilPerihal($pengajuan->keterangan),
+            'jenis_mutasi' => $jenisMutasi,
+            'tanggal_mutasi' => $tanggalMutasi,
+            'alasan_mutasi' => $alasanMutasi,
+        ];
+    }
+
+    /**
+     * Ekstraksi metadata penghapusan dari teks keterangan terstruktur jika jenis penghapusan.
+     *
+     * @return array{perihal: string, dasar_usulan: string, alasan_penghapusan: string}|null
+     */
+    public function ekstrakPenghapusanMeta(Pengajuan $pengajuan): ?array
+    {
+        if ($pengajuan->jenis_pengajuan !== 'penghapusan') {
+            return null;
+        }
+
+        $dasarUsulan = 'Kerusakan berat / tidak ekonomis';
+        if (preg_match('/^Dasar Usulan:\s*(.*)$/m', $pengajuan->keterangan ?? '', $m)) {
+            $dasarUsulan = trim($m[1]);
+        }
+        $alasanPenghapusan = '';
+        if (preg_match('/^Alasan & Penjelasan Kondisi:\s*(.*)$/ms', $pengajuan->keterangan ?? '', $m)) {
+            $alasanPenghapusan = trim($m[1]);
+        } else {
+            $alasanPenghapusan = $pengajuan->keterangan ?? '-';
+        }
+
+        return [
+            'perihal' => $this->ambilPerihal($pengajuan->keterangan),
+            'dasar_usulan' => $dasarUsulan,
+            'alasan_penghapusan' => $alasanPenghapusan,
+        ];
+    }
+
+    /**
+     * Format rincian item berdasarkan jenis pengajuan.
+     */
+    public function formatItemsByJenis(Pengajuan $pengajuan, ?array $mutasiMeta = null)
+    {
+        if ($pengajuan->jenis_pengajuan === 'mutasi' && $mutasiMeta === null) {
+            $mutasiMeta = $this->ekstrakMutasiMeta($pengajuan);
+        }
+
+        return match ($pengajuan->jenis_pengajuan) {
+            'pengadaan' => $pengajuan->itemPengadaan->map(fn ($item) => [
+                'id' => $item->id_item_pengadaan,
+                'kategori' => $item->kategori?->nama_kategori ?? '-',
+                'nama_barang' => $item->nama_barang,
+                'spesifikasi' => $item->spesifikasi,
+                'jumlah' => $item->jumlah,
+                'harga_satuan' => $item->jumlah > 0 ? (float) $item->estimasi_anggaran / $item->jumlah : (float) $item->estimasi_anggaran,
+                'subtotal' => (float) $item->estimasi_anggaran,
+            ])->values(),
+            'perbaikan' => $pengajuan->itemPerbaikan->map(fn ($item) => [
+                'id' => $item->id_item_perbaikan,
+                'id_aset' => $item->id_aset,
+                'kode_aset' => $item->aset?->kode_aset ?? '-',
+                'kategori' => $item->aset?->kategori?->nama_kategori ?? 'Perbaikan Aset',
+                'nama_barang' => $item->aset?->nama_barang ?? "Aset #{$item->id_aset}",
+                'spesifikasi' => $item->deskripsi_kerusakan,
+                'deskripsi_kerusakan' => $item->deskripsi_kerusakan,
+                'kondisi' => $item->aset?->kondisi ?? '-',
+                'jumlah' => 1,
+                'harga_satuan' => (float) $item->estimasi_biaya,
+                'subtotal' => (float) $item->estimasi_biaya,
+                'estimasi_biaya' => (float) $item->estimasi_biaya,
+            ])->values(),
+            'mutasi' => $pengajuan->itemMutasi->map(function ($item) use ($mutasiMeta) {
+                $penempatanAktif = $item->aset?->penempatanAktif;
+                $ruanganAsalObj = $penempatanAktif?->ruangan;
+                $gedungAsal = $ruanganAsalObj?->gedung?->nama_gedung;
+                $ruanganAsal = $ruanganAsalObj ? ($gedungAsal ? "{$gedungAsal} - {$ruanganAsalObj->nama_ruangan}" : $ruanganAsalObj->nama_ruangan) : '-';
+
+                $ruanganTujuanObj = $item->ruanganTujuan;
+                $gedungTujuan = $ruanganTujuanObj?->gedung?->nama_gedung;
+                $ruanganTujuan = $ruanganTujuanObj ? ($gedungTujuan ? "{$gedungTujuan} - {$ruanganTujuanObj->nama_ruangan}" : $ruanganTujuanObj->nama_ruangan) : '-';
+
+                $pjAsal = $penempatanAktif?->penanggungJawab?->nama_lengkap ?? '-';
+                $pjTujuan = $item->penanggungJawabTujuan?->nama_lengkap ?? '-';
+
+                return [
+                    'id' => $item->id_item_mutasi,
+                    'id_aset' => $item->id_aset,
+                    'kode_aset' => $item->aset?->kode_aset ?? '-',
+                    'nama_barang' => $item->aset?->nama_barang ?? "Aset #{$item->id_aset}",
+                    'kategori' => $item->aset?->kategori?->nama_kategori ?? 'Mutasi Aset',
+                    'kondisi' => $item->aset?->kondisi ?? 'baik',
+                    'spesifikasi' => $item->aset?->spesifikasi ?? '-',
+                    'jumlah' => 1,
+                    'harga_satuan' => 0,
+                    'subtotal' => 0,
+                    'ruangan_asal' => $ruanganAsal,
+                    'ruangan_tujuan' => $ruanganTujuan,
+                    'pj_asal' => $pjAsal,
+                    'pj_tujuan' => $pjTujuan,
+                    'jenis_mutasi' => $mutasiMeta['jenis_mutasi'] ?? 'Antarruangan dalam fakultas',
+                    'tanggal_mutasi' => $mutasiMeta['tanggal_mutasi'] ?? '-',
+                    'alasan_mutasi' => $mutasiMeta['alasan_mutasi'] ?? '-',
+                ];
+            })->values(),
+            'penghapusan' => $pengajuan->itemPenghapusan->map(function ($item) {
+                $aset = $item->aset;
+                $spesifikasi = $item->jalur_penghapusan
+                    ? "Jalur: " . ucfirst(str_replace('_', ' ', $item->jalur_penghapusan)) . ($item->pihak_penerima ? " (Penerima: {$item->pihak_penerima})" : '') . ($item->catatan_tim_penilai ? " — {$item->catatan_tim_penilai}" : '')
+                    : ("Kondisi: " . ucfirst($aset?->kondisi ?? 'rusak_berat') . ($aset?->tahun_perolehan ? " • Tahun: {$aset->tahun_perolehan}" : ''));
+
+                return [
+                    'id' => $item->id_item_penghapusan,
+                    'id_aset' => $item->id_aset,
+                    'kategori' => $aset?->kategori?->nama_kategori ?? 'Penghapusan Aset',
+                    'nama_barang' => $aset ? "{$aset->nama_barang} ({$aset->kode_aset})" : "Aset #{$item->id_aset}",
+                    'spesifikasi' => $spesifikasi,
+                    'jumlah' => 1,
+                    'harga_satuan' => (float) ($item->nilai_penjualan ?? $aset?->harga_perolehan ?? 0),
+                    'subtotal' => (float) ($item->nilai_penjualan ?? 0),
+                    'kode_aset' => $aset?->kode_aset,
+                    'kondisi' => $aset?->kondisi,
+                    'tahun_perolehan' => $aset?->tahun_perolehan,
+                    'harga_perolehan' => (float) ($aset?->harga_perolehan ?? 0),
+                    'jalur_penghapusan' => $item->jalur_penghapusan,
+                    'pihak_penerima' => $item->pihak_penerima,
+                    'nilai_penjualan' => (float) ($item->nilai_penjualan ?? 0),
+                    'catatan_tim_penilai' => $item->catatan_tim_penilai,
+                ];
+            })->values(),
+            default => collect(),
+        };
     }
 
     /**
