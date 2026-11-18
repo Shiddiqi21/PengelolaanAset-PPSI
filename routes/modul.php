@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ModulBelumTersediaController;
+use App\Http\Controllers\MutasiController;
+use App\Http\Controllers\PenerimaanController;
 use App\Http\Controllers\PengadaanController;
 use App\Http\Controllers\PengajuanController;
 use Illuminate\Support\Facades\Route;
@@ -29,8 +31,10 @@ Route::middleware('role:operator')->group(function () use ($sementara) {
     Route::get('/lokasi', $sementara)->defaults('judul', 'Lokasi & penanggung jawab')->name('lokasi.index');
     Route::get('/pemeriksaan', [PengajuanController::class, 'indexOperator'])->name('pemeriksaan.index');
     Route::post('/pemeriksaan/{pengajuan}', [PengajuanController::class, 'prosesPemeriksaanOperator'])->name('pemeriksaan.proses');
-    Route::get('/penerimaan', $sementara)->defaults('judul', 'Penerimaan aset')->name('penerimaan.index');
-    Route::get('/mutasi', $sementara)->defaults('judul', 'Mutasi aset')->name('mutasi.index');
+    Route::get('/penerimaan', [PenerimaanController::class, 'index'])->name('penerimaan.index');
+    Route::post('/penerimaan', [PenerimaanController::class, 'store'])->name('penerimaan.store');
+    Route::get('/mutasi', [MutasiController::class, 'indexOperator'])->name('mutasi.index');
+    Route::post('/mutasi/{pengajuan}/proses', [MutasiController::class, 'proses'])->name('mutasi.proses');
     Route::get('/penghapusan', $sementara)->defaults('judul', 'Penghapusan aset')->name('penghapusan.index');
     Route::get('/perbaikan', $sementara)->defaults('judul', 'Perbaikan aset')->name('perbaikan.index');
     Route::get('/pemeliharaan', $sementara)->defaults('judul', 'Pemeliharaan')->name('pemeliharaan.index');
@@ -62,7 +66,10 @@ Route::middleware('role:pemohon')->prefix('pemohon')->group(function () use ($se
     Route::get('/pengajuan/pengadaan', [PengadaanController::class, 'create'])->name('pemohon.pengadaan');
     Route::post('/pengajuan/pengadaan', [PengadaanController::class, 'store'])->name('pemohon.pengadaan.store');
     Route::get('/pengajuan/perbaikan', $sementara)->defaults('judul', 'Pengajuan perbaikan')->name('pemohon.perbaikan');
-    Route::get('/pengajuan/mutasi', $sementara)->defaults('judul', 'Pengajuan mutasi')->name('pemohon.mutasi');
+    Route::get('/pengajuan/mutasi', [MutasiController::class, 'create'])->name('pemohon.mutasi');
+    Route::post('/pengajuan/mutasi', [MutasiController::class, 'store'])->name('pemohon.pengajuan.mutasi.store');
+    Route::get('/pengajuan/mutasi/{pengajuan}/edit', [MutasiController::class, 'edit'])->name('pemohon.mutasi.edit');
+    Route::match(['put', 'patch', 'post'], '/pengajuan/mutasi/{pengajuan}', [MutasiController::class, 'update'])->name('pemohon.mutasi.update');
     Route::get('/pengajuan/penghapusan', $sementara)->defaults('judul', 'Pengajuan penghapusan')->name('pemohon.penghapusan');
     Route::get('/pengajuan', [PengajuanController::class, 'indexPemohon'])->name('pemohon.pengajuan');
     Route::get('/pengajuan/{pengajuan}', [PengajuanController::class, 'showPemohon'])->name('pemohon.pengajuan.show');

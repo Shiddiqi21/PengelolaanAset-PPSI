@@ -119,6 +119,13 @@ class PengajuanController extends Controller
                 ]);
         }
 
+        if ($pengajuan->jenis_pengajuan === 'mutasi' && $pengajuan->dokumen()->count() < 1) {
+            return redirect()->route('pemohon.pengajuan.show', $pengajuan->id_pengajuan)
+                ->withErrors([
+                    'status' => 'Pengajuan mutasi tidak dapat dikirim karena belum ada dokumen persetujuan/pendukung yang dilampirkan. Silakan klik Edit pengajuan untuk mengunggah berkas terlebih dahulu.',
+                ]);
+        }
+
         $this->statusService->kirimDraft($pengajuan, $request->user()->id_pengguna);
 
         return redirect()->route('pemohon.pengajuan.show', $pengajuan->id_pengajuan)
@@ -648,8 +655,11 @@ class PengajuanController extends Controller
             'riwayatStatus.pengguna.peran',
             'itemPengadaan.kategori',
             'itemPerbaikan.aset',
-            'itemMutasi.aset',
-            'itemMutasi.ruanganTujuan',
+            'itemMutasi.aset.kategori',
+            'itemMutasi.aset.penempatanAktif.ruangan.gedung',
+            'itemMutasi.aset.penempatanAktif.penanggungJawab',
+            'itemMutasi.ruanganTujuan.gedung',
+            'itemMutasi.penanggungJawabTujuan',
             'itemPenghapusan.aset',
         ]);
 
@@ -676,15 +686,27 @@ class PengajuanController extends Controller
                 'harga_satuan' => (float) $item->estimasi_biaya,
                 'subtotal' => (float) $item->estimasi_biaya,
             ])->values(),
-            'mutasi' => $pengajuan->itemMutasi->map(fn ($item) => [
-                'id' => $item->id_item_mutasi,
-                'kategori' => 'Mutasi Aset',
-                'nama_barang' => $item->aset?->nama_barang ?? "Aset #{$item->id_aset}",
-                'spesifikasi' => 'Tujuan: ' . ($item->ruanganTujuan?->nama_ruangan ?? '-'),
-                'jumlah' => 1,
-                'harga_satuan' => 0,
-                'subtotal' => 0,
-            ])->values(),
+            'mutasi' => $pengajuan->itemMutasi->map(function ($item) {
+                $penempatanAktif = $item->aset?->penempatanAktif;
+                $ruanganAsal = $penempatanAktif?->ruangan?->nama_ruangan ?? '-';
+                $ruanganTujuan = $item->ruanganTujuan?->nama_ruangan ?? '-';
+                $pjAsal = $penempatanAktif?->penanggungJawab?->nama_lengkap ?? '-';
+                $pjTujuan = $item->penanggungJawabTujuan?->nama_lengkap ?? '-';
+
+                return [
+                    'id' => $item->id_item_mutasi,
+                    'kategori' => $item->aset?->kategori?->nama_kategori ?? 'Mutasi Aset',
+                    'nama_barang' => $item->aset ? "{$item->aset->nama_barang} ({$item->aset->kode_aset})" : "Aset #{$item->id_aset}",
+                    'spesifikasi' => "Dari: {$ruanganAsal} (PJ: {$pjAsal}) → Tujuan: {$ruanganTujuan} (PJ: {$pjTujuan})",
+                    'jumlah' => 1,
+                    'harga_satuan' => 0,
+                    'subtotal' => 0,
+                    'ruangan_asal' => $ruanganAsal,
+                    'ruangan_tujuan' => $ruanganTujuan,
+                    'pj_asal' => $pjAsal,
+                    'pj_tujuan' => $pjTujuan,
+                ];
+            })->values(),
             'penghapusan' => $pengajuan->itemPenghapusan->map(fn ($item) => [
                 'id' => $item->id_item_penghapusan,
                 'kategori' => 'Penghapusan Aset',

@@ -65,7 +65,7 @@ class Pengajuan extends Model
 
     public function penerimaanAset()
     {
-        return $this->hasOne(PenerimaanAset::class, 'id_pengajuan', 'id_pengajuan');
+        return $this->hasMany(PenerimaanAset::class, 'id_pengajuan', 'id_pengajuan');
     }
 
     public function itemPerbaikan()

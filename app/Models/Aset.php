@@ -50,6 +50,11 @@ class Aset extends Model
         return $this->hasMany(PenempatanAset::class, 'id_aset', 'id_aset');
     }
 
+    public function penempatanAktif()
+    {
+        return $this->hasOne(PenempatanAset::class, 'id_aset', 'id_aset')->whereNull('tanggal_selesai');
+    }
+
     public function perbaikan()
     {
         return $this->hasMany(ItemPerbaikan::class, 'id_aset', 'id_aset');

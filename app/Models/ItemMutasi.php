@@ -35,6 +35,11 @@ class ItemMutasi extends Model
         return $this->belongsTo(User::class, 'id_pengguna_pj', 'id_pengguna');
     }
 
+    public function penanggungJawabTujuan()
+    {
+        return $this->belongsTo(User::class, 'id_pengguna_pj', 'id_pengguna');
+    }
+
     public function penempatan()
     {
         return $this->hasOne(PenempatanAset::class, 'id_item_mutasi', 'id_item_mutasi');
