@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BastController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ModulBelumTersediaController;
 use App\Http\Controllers\MutasiController;
@@ -42,7 +43,10 @@ Route::middleware('role:operator')->group(function () use ($sementara) {
     Route::get('/pemeliharaan', $sementara)->defaults('judul', 'Pemeliharaan')->name('pemeliharaan.index');
     Route::get('/cetak-label', $sementara)->defaults('judul', 'Cetak label aset')->name('label.index');
     Route::get('/kartu-kendali', $sementara)->defaults('judul', 'Kartu kendali ruangan')->name('kartu-kendali.index');
-    Route::get('/arsip-bast', $sementara)->defaults('judul', 'Arsip BAST')->name('bast.index');
+    Route::get('/arsip-bast', [BastController::class, 'index'])->name('bast.index');
+    Route::post('/arsip-bast', [BastController::class, 'store'])->name('bast.store');
+    Route::get('/arsip-bast/{beritaAcara}/pdf', [BastController::class, 'cetakPdf'])->name('bast.pdf');
+    Route::post('/arsip-bast/{beritaAcara}/arsipkan', [BastController::class, 'arsipkan'])->name('bast.arsipkan');
     Route::get('/laporan', $sementara)->defaults('judul', 'Laporan & rekonsiliasi')->name('laporan.index');
 });
 

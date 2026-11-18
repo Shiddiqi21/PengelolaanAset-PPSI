@@ -407,8 +407,20 @@ export default function MutasiIndex({
                                 status: (
                                     <div>
                                         <Badge nada="sukses">Selesai</Badge>
-                                        {p.berita_acara && p.berita_acara.length > 0 && (
-                                            <p className="mt-1 text-[11px] text-ink-500">BAST Tersedia</p>
+                                        {p.berita_acara && p.berita_acara.length > 0 ? (
+                                            <a
+                                                href={route('bast.index', { q: p.berita_acara[0].nomor_bast })}
+                                                className="block mt-1 text-[11px] font-semibold text-brand-700 hover:underline"
+                                            >
+                                                BAST: {p.berita_acara[0].nomor_bast}
+                                            </a>
+                                        ) : (
+                                            <a
+                                                href={route('bast.index')}
+                                                className="block mt-1 text-[11px] text-ink-500 hover:text-brand-600"
+                                            >
+                                                + Buat BAST
+                                            </a>
                                         )}
                                     </div>
                                 ),

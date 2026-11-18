@@ -285,9 +285,15 @@ export default function PenerimaanIndex({
             render: (r) => {
                 const adaBast = r.berita_acara && r.berita_acara.length > 0;
                 return (
-                    <Badge nada={adaBast ? 'sukses' : 'netral'}>
-                        {adaBast ? r.berita_acara[0].nomor_bast || 'Sudah BAST' : 'Belum BAST'}
-                    </Badge>
+                    <a
+                        href={adaBast ? route('bast.index', { q: r.berita_acara[0].nomor_bast }) : route('bast.index')}
+                        className="inline-block hover:opacity-80"
+                        title={adaBast ? 'Lihat BAST di Arsip BAST' : 'Susun BAST untuk penerimaan ini'}
+                    >
+                        <Badge nada={adaBast ? 'sukses' : 'netral'}>
+                            {adaBast ? r.berita_acara[0].nomor_bast || 'Sudah BAST' : '+ Buat BAST'}
+                        </Badge>
+                    </a>
                 );
             },
         },

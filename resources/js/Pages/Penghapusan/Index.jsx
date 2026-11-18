@@ -206,6 +206,32 @@ export default function PenghapusanIndex({
             },
         },
         {
+            header: 'Status BAST',
+            render: (row) => {
+                const bastList = row.berita_acara || row.beritaAcara || [];
+                const adaBast = bastList.length > 0;
+                return (
+                    <div>
+                        {adaBast ? (
+                            <a
+                                href={route('bast.index', { q: bastList[0].nomor_bast })}
+                                className="inline-block hover:opacity-80"
+                            >
+                                <Badge nada="sukses">{bastList[0].nomor_bast}</Badge>
+                            </a>
+                        ) : (
+                            <a
+                                href={route('bast.index')}
+                                className="text-xs text-ink-500 hover:text-brand-700 font-medium"
+                            >
+                                + Buat BAST
+                            </a>
+                        )}
+                    </div>
+                );
+            },
+        },
+        {
             header: 'Aksi',
             render: (row) => (
                 <SecondaryButton

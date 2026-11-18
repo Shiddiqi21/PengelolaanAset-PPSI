@@ -42,4 +42,14 @@ class BeritaAcara extends Model
     {
         return $this->belongsTo(Dokumen::class, 'id_dokumen', 'id_dokumen');
     }
+
+    public function items()
+    {
+        return $this->hasMany(BeritaAcaraItem::class, 'id_bast', 'id_bast');
+    }
+
+    public function pembuat()
+    {
+        return $this->belongsTo(User::class, 'id_pembuat', 'id_pengguna');
+    }
 }
