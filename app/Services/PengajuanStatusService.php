@@ -223,6 +223,10 @@ class PengajuanStatusService
             if ($keputusan === 'setujui') {
                 $pengajuan->update(['status' => 'disetujui_pimpinan']);
 
+                if ($pengajuan->jenis_pengajuan === 'perbaikan') {
+                    $pengajuan->itemPerbaikan()->update(['status_perbaikan' => 'disetujui']);
+                }
+
                 $riwayatCatatan = 'Disetujui oleh Pimpinan. ' . ($catatan ?: 'Pengajuan disetujui untuk diproses.');
 
                 RiwayatStatusPengajuan::query()->create([
@@ -242,6 +246,10 @@ class PengajuanStatusService
                 );
             } elseif ($keputusan === 'tolak') {
                 $pengajuan->update(['status' => 'ditolak']);
+
+                if ($pengajuan->jenis_pengajuan === 'perbaikan') {
+                    $pengajuan->itemPerbaikan()->update(['status_perbaikan' => 'ditolak']);
+                }
 
                 $riwayatCatatan = "Ditolak oleh Pimpinan: {$catatan}";
 

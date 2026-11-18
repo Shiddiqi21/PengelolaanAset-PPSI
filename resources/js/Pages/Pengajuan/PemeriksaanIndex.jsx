@@ -313,11 +313,86 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
 
                         <div className="my-5 space-y-4">
                             <div className="rounded-lg border border-line bg-surface p-4 text-xs leading-relaxed text-ink-900">
-                                <p className="font-semibold text-ink-600">Perihal / Keterangan Usulan:</p>
-                                <p className="mt-1">{targetPengajuan.keterangan_singkat}</p>
-                                <p className="mt-2 font-semibold text-brand-700">
-                                    Total Estimasi: {formatRupiah(targetPengajuan.total_estimasi)}
+                                <p className="font-semibold text-ink-600 uppercase tracking-wider">Perihal & Keterangan Usulan:</p>
+                                <p className="mt-1 font-medium text-ink-900">{targetPengajuan.keterangan_singkat}</p>
+                                {targetPengajuan.keterangan && targetPengajuan.keterangan !== targetPengajuan.keterangan_singkat && (
+                                    <pre className="mt-2 border-t border-line/60 pt-2 font-sans whitespace-pre-wrap text-ink-700">
+                                        {targetPengajuan.keterangan}
+                                    </pre>
+                                )}
+                                {targetPengajuan.total_estimasi > 0 && (
+                                    <p className="mt-2 font-semibold text-brand-700">
+                                        Total Estimasi: {formatRupiah(targetPengajuan.total_estimasi)}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Rincian Barang / Aset yang Diajukan */}
+                            <div className="rounded-lg border border-line p-3">
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-600">
+                                    Rincian Barang / Aset yang Diajukan ({targetPengajuan.items?.length || 0} item):
                                 </p>
+                                {!targetPengajuan.items || targetPengajuan.items.length === 0 ? (
+                                    <p className="text-xs text-ink-400">Tidak ada rincian item tercatat.</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {targetPengajuan.items.map((item, idx) => (
+                                            <div key={item.id ?? idx} className="rounded-lg border border-line bg-surface p-3.5 text-xs">
+                                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        {item.kode_aset && item.kode_aset !== '-' && (
+                                                            <Badge nada="brand">{item.kode_aset}</Badge>
+                                                        )}
+                                                        <span className="font-semibold text-ink-900">{item.nama_barang}</span>
+                                                        {item.merek_tipe && item.merek_tipe !== '-' && (
+                                                            <span className="text-ink-500">({item.merek_tipe})</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {item.kondisi && item.kondisi !== '-' && (
+                                                            <Badge nada={item.kondisi === 'baik' ? 'sukses' : item.kondisi === 'kurang_baik' ? 'peringatan' : 'bahaya'}>
+                                                                {item.kondisi.replace('_', ' ').toUpperCase()}
+                                                            </Badge>
+                                                        )}
+                                                        {item.subtotal > 0 && (
+                                                            <span className="font-semibold text-brand-700">
+                                                                {formatRupiah(item.subtotal)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-2 text-ink-700">
+                                                    <span className="font-medium text-ink-500">
+                                                        {targetPengajuan.jenis_pengajuan === 'perbaikan' ? 'Deskripsi Kerusakan: ' : 'Spesifikasi: '}
+                                                    </span>
+                                                    <span className="whitespace-pre-wrap">{item.spesifikasi || '-'}</span>
+                                                </div>
+
+                                                {item.foto_url && (
+                                                    <div className="mt-3 border-t border-line pt-2">
+                                                        <span className="font-medium text-ink-500 block mb-1.5">Bukti Foto Kerusakan:</span>
+                                                        <a
+                                                            href={item.foto_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-block group"
+                                                        >
+                                                            <img
+                                                                src={item.foto_url}
+                                                                alt="Bukti Kerusakan"
+                                                                className="h-24 w-24 rounded-lg object-cover border border-line group-hover:opacity-90 shadow-sm"
+                                                            />
+                                                            <span className="block text-[11px] text-brand-600 group-hover:underline mt-1 font-medium">
+                                                                Lihat foto ukuran penuh ↗
+                                                            </span>
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Dokumen Terlampir */}
