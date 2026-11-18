@@ -27,16 +27,14 @@ function formatRupiah(angka) {
     }).format(angka);
 }
 
-export default function Index({ daftarPerbaikan, daftarTeknisi = [], daftarVendor = [], tabAktif, filters }) {
+export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, filters }) {
     const [q, setQ] = useState(filters.q || '');
     const [modalBuka, setModalBuka] = useState(false);
     const [targetItem, setTargetItem] = useState(null);
     const isFirstRender = useRef(true);
 
     const formTugaskan = useForm({
-        tipe_pelaksana: 'teknisi',
         id_teknisi: daftarTeknisi[0]?.id_pengguna ? String(daftarTeknisi[0].id_pengguna) : '',
-        id_vendor: daftarVendor[0]?.id_vendor ? String(daftarVendor[0].id_vendor) : '',
         estimasi_biaya: '',
         catatan: '',
     });
@@ -74,9 +72,7 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], daftarVendo
         formTugaskan.reset();
         formTugaskan.clearErrors();
         formTugaskan.setData({
-            tipe_pelaksana: 'teknisi',
             id_teknisi: daftarTeknisi[0]?.id_pengguna ? String(daftarTeknisi[0].id_pengguna) : '',
-            id_vendor: daftarVendor[0]?.id_vendor ? String(daftarVendor[0].id_vendor) : '',
             estimasi_biaya: item.estimasi_biaya ? String(item.estimasi_biaya) : '',
             catatan: '',
         });
@@ -164,7 +160,7 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], daftarVendo
             <PageHeader
                 breadcrumb={['FTI', 'Perbaikan aset']}
                 judul="Pemrosesan perbaikan aset"
-                deskripsi="Kelola penugasan teknisi fakultas atau rekanan vendor untuk usulan perbaikan aset yang telah disetujui pimpinan."
+                deskripsi="Kelola penugasan teknisi internal fakultas untuk usulan perbaikan aset yang telah disetujui pimpinan."
             />
 
             <div className="space-y-4">
@@ -318,99 +314,26 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], daftarVendo
                             {/* Form Penugasan (Hanya jika status 'disetujui' dan siap ditugaskan) */}
                             {targetItem.bisa_ditugaskan && (
                                 <form id="form-penugasan" onSubmit={kirimPenugasan} className="space-y-4">
-                                    <Field label="Pilih jenis pelaksana perbaikan">
-                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                            <label
-                                                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
-                                                    formTugaskan.data.tipe_pelaksana === 'teknisi'
-                                                        ? 'border-brand-600 bg-brand-50/50'
-                                                        : 'border-line hover:bg-surface'
-                                                }`}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="tipe_pelaksana"
-                                                    value="teknisi"
-                                                    checked={formTugaskan.data.tipe_pelaksana === 'teknisi'}
-                                                    onChange={(e) => formTugaskan.setData('tipe_pelaksana', e.target.value)}
-                                                    className="mt-0.5 text-brand-600 focus:ring-brand-600"
-                                                />
-                                                <div>
-                                                    <p className="text-sm font-semibold text-ink-900">Teknisi Fakultas</p>
-                                                    <p className="mt-0.5 text-xs text-ink-500">
-                                                        Dikerjakan mandiri oleh staf teknisi internal fakultas.
-                                                    </p>
-                                                </div>
-                                            </label>
-
-                                            <label
-                                                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
-                                                    formTugaskan.data.tipe_pelaksana === 'vendor'
-                                                        ? 'border-brand-600 bg-brand-50/50'
-                                                        : 'border-line hover:bg-surface'
-                                                }`}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="tipe_pelaksana"
-                                                    value="vendor"
-                                                    checked={formTugaskan.data.tipe_pelaksana === 'vendor'}
-                                                    onChange={(e) => formTugaskan.setData('tipe_pelaksana', e.target.value)}
-                                                    className="mt-0.5 text-brand-600 focus:ring-brand-600"
-                                                />
-                                                <div>
-                                                    <p className="text-sm font-semibold text-ink-900">Rekanan Vendor Eksternal</p>
-                                                    <p className="mt-0.5 text-xs text-ink-500">
-                                                        Perbaikan membutuhkan pihak ketiga atau suku cadang khusus.
-                                                    </p>
-                                                </div>
-                                            </label>
-                                        </div>
+                                    <Field
+                                        label="Teknisi Fakultas yang Ditugaskan"
+                                        htmlFor="id_teknisi"
+                                        error={formTugaskan.errors.id_teknisi}
+                                    >
+                                        <SelectInput
+                                            id="id_teknisi"
+                                            className="block w-full"
+                                            value={formTugaskan.data.id_teknisi}
+                                            onChange={(e) => formTugaskan.setData('id_teknisi', e.target.value)}
+                                            required
+                                        >
+                                            <option value="">-- Pilih teknisi fakultas --</option>
+                                            {daftarTeknisi.map((t) => (
+                                                <option key={t.id_pengguna} value={t.id_pengguna}>
+                                                    {t.nama_lengkap} (NIP: {t.nip || '-'})
+                                                </option>
+                                            ))}
+                                        </SelectInput>
                                     </Field>
-
-                                    {formTugaskan.data.tipe_pelaksana === 'teknisi' ? (
-                                        <Field
-                                            label="Teknisi Fakultas yang Ditugaskan"
-                                            htmlFor="id_teknisi"
-                                            error={formTugaskan.errors.id_teknisi}
-                                        >
-                                            <SelectInput
-                                                id="id_teknisi"
-                                                className="block w-full"
-                                                value={formTugaskan.data.id_teknisi}
-                                                onChange={(e) => formTugaskan.setData('id_teknisi', e.target.value)}
-                                                required
-                                            >
-                                                <option value="">-- Pilih teknisi fakultas --</option>
-                                                {daftarTeknisi.map((t) => (
-                                                    <option key={t.id_pengguna} value={t.id_pengguna}>
-                                                        {t.nama_lengkap} (NIP: {t.nip || '-'})
-                                                    </option>
-                                                ))}
-                                            </SelectInput>
-                                        </Field>
-                                    ) : (
-                                        <Field
-                                            label="Vendor Rekanan yang Ditunjuk"
-                                            htmlFor="id_vendor"
-                                            error={formTugaskan.errors.id_vendor}
-                                        >
-                                            <SelectInput
-                                                id="id_vendor"
-                                                className="block w-full"
-                                                value={formTugaskan.data.id_vendor}
-                                                onChange={(e) => formTugaskan.setData('id_vendor', e.target.value)}
-                                                required
-                                            >
-                                                <option value="">-- Pilih vendor rekanan --</option>
-                                                {daftarVendor.map((v) => (
-                                                    <option key={v.id_vendor} value={v.id_vendor}>
-                                                        {v.nama_vendor} ({v.kontak || '-'})
-                                                    </option>
-                                                ))}
-                                            </SelectInput>
-                                        </Field>
-                                    )}
 
                                     <Field
                                         label="Estimasi Biaya / Plafon Maksimal (Opsional)"

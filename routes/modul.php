@@ -128,6 +128,7 @@ Route::middleware('role:teknisi')->prefix('teknisi')->group(function () use ($se
     Route::get('/', [DashboardController::class, 'teknisi'])->name('teknisi.dashboard');
     Route::get('/tugas', [TeknisiTugasController::class, 'index'])->name('teknisi.tugas');
     Route::post('/tugas/{itemPerbaikan}', [TeknisiTugasController::class, 'update'])->name('teknisi.tugas.update');
+    Route::put('/pemeliharaan/{pemeliharaan}', [TeknisiTugasController::class, 'updatePemeliharaan'])->name('teknisi.pemeliharaan.update');
     Route::get('/riwayat', [TeknisiTugasController::class, 'riwayat'])->name('teknisi.riwayat');
 });
 

@@ -8,13 +8,13 @@ use App\Models\ItemPerbaikan;
 use App\Models\Pengajuan;
 use App\Models\RiwayatStatusPengajuan;
 use App\Models\User;
-use App\Models\Vendor;
 use App\Services\ActivityLogger;
 use App\Support\PeranNama;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -206,7 +206,6 @@ class PerbaikanController extends Controller
                 'aset.kategori',
                 'pengajuan.pemohon.unit',
                 'teknisi',
-                'vendor',
             ])
             ->whereHas('pengajuan', fn ($q) => $q->where('status', '!=', 'draft'));
 
@@ -215,7 +214,7 @@ class PerbaikanController extends Controller
             // Sudah disetujui pimpinan / siap ditugaskan
             $query->where('status_perbaikan', 'disetujui');
         } elseif ($tab === 'proses') {
-            // Sedang dalam perbaikan teknisi / vendor
+            // Sedang dalam perbaikan teknisi
             $query->where('status_perbaikan', 'dalam_perbaikan');
         } elseif ($tab === 'selesai') {
             // Perbaikan telah rampung
@@ -228,8 +227,7 @@ class PerbaikanController extends Controller
             $query->where(function ($q) use ($keyword) {
                 $q->whereHas('pengajuan', fn ($qp) => $qp->where('nomor_pengajuan', 'like', $keyword))
                     ->orWhereHas('aset', fn ($qa) => $qa->where('nama_barang', 'like', $keyword)->orWhere('kode_aset', 'like', $keyword))
-                    ->orWhereHas('teknisi', fn ($qt) => $qt->where('nama_lengkap', 'like', $keyword))
-                    ->orWhereHas('vendor', fn ($qv) => $qv->where('nama_vendor', 'like', $keyword));
+                    ->orWhereHas('teknisi', fn ($qt) => $qt->where('nama_lengkap', 'like', $keyword));
             });
         }
 
@@ -254,12 +252,7 @@ class PerbaikanController extends Controller
                     default => ucfirst($item->status_perbaikan),
                 };
 
-                $pelaksanaTeks = '-';
-                if ($item->teknisi) {
-                    $pelaksanaTeks = "Teknisi: {$item->teknisi->nama_lengkap}";
-                } elseif ($item->vendor) {
-                    $pelaksanaTeks = "Vendor: {$item->vendor->nama_vendor}";
-                }
+                $pelaksanaTeks = $item->teknisi ? "Teknisi: {$item->teknisi->nama_lengkap}" : '-';
 
                 return [
                     'id_item_perbaikan' => $item->id_item_perbaikan,
@@ -293,15 +286,9 @@ class PerbaikanController extends Controller
             ->orderBy('nama_lengkap')
             ->get(['id_pengguna', 'nama_lengkap', 'nip']);
 
-        // Daftar vendor rekanan
-        $daftarVendor = Vendor::query()
-            ->orderBy('nama_vendor')
-            ->get(['id_vendor', 'nama_vendor', 'kontak']);
-
         return Inertia::render('Perbaikan/Index', [
             'daftarPerbaikan' => $daftarPerbaikan,
             'daftarTeknisi' => $daftarTeknisi,
-            'daftarVendor' => $daftarVendor,
             'tabAktif' => $tab,
             'filters' => [
                 'q' => $request->q ?? '',
@@ -311,28 +298,39 @@ class PerbaikanController extends Controller
     }
 
     /**
-     * Operator menugaskan teknisi atau vendor untuk item perbaikan.
+     * Operator menugaskan teknisi internal untuk item perbaikan.
      */
     public function tugaskanTeknisi(Request $request, ItemPerbaikan $itemPerbaikan): RedirectResponse
     {
         $validated = $request->validate([
-            'tipe_pelaksana' => ['required', 'in:teknisi,vendor'],
-            'id_teknisi' => ['required_if:tipe_pelaksana,teknisi', 'nullable', 'exists:pengguna,id_pengguna'],
-            'id_vendor' => ['required_if:tipe_pelaksana,vendor', 'nullable', 'exists:vendor,id_vendor'],
+            'id_teknisi' => [
+                'required',
+                'integer',
+                'exists:pengguna,id_pengguna',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $isTeknisiAktif = User::query()
+                        ->where('id_pengguna', $value)
+                        ->where('is_aktif', true)
+                        ->whereHas('semuaPeran', fn ($q) => $q->where('nama_peran', PeranNama::TEKNISI))
+                        ->exists();
+
+                    if (! $isTeknisiAktif) {
+                        $fail('Teknisi yang dipilih tidak valid atau tidak berstatus aktif.');
+                    }
+                },
+            ],
             'estimasi_biaya' => ['nullable', 'numeric', 'min:0'],
             'catatan' => ['nullable', 'string', 'max:500'],
         ], [
-            'tipe_pelaksana.required' => 'Pilih pelaksana perbaikan (Teknisi Fakultas atau Vendor).',
-            'id_teknisi.required_if' => 'Silakan pilih teknisi fakultas yang ditugaskan.',
-            'id_vendor.required_if' => 'Silakan pilih vendor rekanan yang ditunjuk.',
+            'id_teknisi.required' => 'Pilih teknisi internal fakultas yang ditugaskan.',
+            'id_teknisi.exists' => 'Teknisi yang dipilih tidak ditemukan dalam sistem.',
         ]);
 
         DB::transaction(function () use ($itemPerbaikan, $validated, $request) {
-            $perluVendor = $validated['tipe_pelaksana'] === 'vendor';
             $itemPerbaikan->update([
-                'id_teknisi' => $perluVendor ? null : $validated['id_teknisi'],
-                'id_vendor' => $perluVendor ? $validated['id_vendor'] : null,
-                'perlu_vendor' => $perluVendor,
+                'id_teknisi' => $validated['id_teknisi'],
+                'id_vendor' => null,
+                'perlu_vendor' => false,
                 'estimasi_biaya' => $validated['estimasi_biaya'] ?? $itemPerbaikan->estimasi_biaya,
                 'status_perbaikan' => 'dalam_perbaikan',
                 'tanggal_mulai' => now(),
@@ -341,10 +339,8 @@ class PerbaikanController extends Controller
             $pengajuan = $itemPerbaikan->pengajuan;
             $pengajuan->update(['status' => 'diproses']);
 
-            $itemPerbaikan->load(['teknisi', 'vendor']);
-            $namaPelaksana = $perluVendor
-                ? 'Vendor ' . ($itemPerbaikan->vendor?->nama_vendor ?? '')
-                : 'Teknisi ' . ($itemPerbaikan->teknisi?->nama_lengkap ?? '');
+            $itemPerbaikan->load('teknisi');
+            $namaPelaksana = 'Teknisi ' . ($itemPerbaikan->teknisi?->nama_lengkap ?? '');
 
             RiwayatStatusPengajuan::query()->create([
                 'id_pengajuan' => $pengajuan->id_pengajuan,

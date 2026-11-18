@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Aset;
 use App\Models\PemeliharaanAset;
 use App\Models\User;
-use App\Models\Vendor;
 use App\Services\ActivityLogger;
 use App\Support\PeranNama;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,7 +26,7 @@ class PemeliharaanController extends Controller
         }
 
         $query = PemeliharaanAset::query()
-            ->with(['aset.kategori', 'pelaksana', 'vendor']);
+            ->with(['aset.kategori', 'pelaksana']);
 
         if ($tab === 'terjadwal') {
             $query->where('status', 'terjadwal');
@@ -41,8 +41,7 @@ class PemeliharaanController extends Controller
             $query->where(function ($q) use ($keyword) {
                 $q->where('jenis_pemeliharaan', 'like', $keyword)
                     ->orWhereHas('aset', fn ($qa) => $qa->where('nama_barang', 'like', $keyword)->orWhere('kode_aset', 'like', $keyword))
-                    ->orWhereHas('pelaksana', fn ($qp) => $qp->where('nama_lengkap', 'like', $keyword))
-                    ->orWhereHas('vendor', fn ($qv) => $qv->where('nama_vendor', 'like', $keyword));
+                    ->orWhereHas('pelaksana', fn ($qp) => $qp->where('nama_lengkap', 'like', $keyword));
             });
         }
 
@@ -67,12 +66,7 @@ class PemeliharaanController extends Controller
                     default => ucfirst($p->status),
                 };
 
-                $pelaksanaTeks = '-';
-                if ($p->pelaksana) {
-                    $pelaksanaTeks = "Teknisi: {$p->pelaksana->nama_lengkap}";
-                } elseif ($p->vendor) {
-                    $pelaksanaTeks = "Vendor: {$p->vendor->nama_vendor}";
-                }
+                $pelaksanaTeks = $p->pelaksana ? "Teknisi: {$p->pelaksana->nama_lengkap}" : '-';
 
                 return [
                     'id_pemeliharaan' => $p->id_pemeliharaan,
@@ -84,9 +78,7 @@ class PemeliharaanController extends Controller
                     'tanggal_jadwal' => $p->tanggal_jadwal?->format('d M Y') ?? '-',
                     'tanggal_pelaksanaan' => $p->tanggal_pelaksanaan?->format('d M Y') ?? '-',
                     'pelaksana' => $pelaksanaTeks,
-                    'tipe_pelaksana' => $p->id_vendor ? 'vendor' : 'teknisi',
                     'id_pelaksana' => $p->id_pelaksana,
-                    'id_vendor' => $p->id_vendor,
                     'uraian' => $p->uraian ?? '-',
                     'biaya' => (float) ($p->biaya ?? 0),
                     'status' => $p->status,
@@ -108,16 +100,10 @@ class PemeliharaanController extends Controller
             ->orderBy('nama_lengkap')
             ->get(['id_pengguna', 'nama_lengkap', 'nip']);
 
-        // Opsi vendor rekanan
-        $daftarVendor = Vendor::query()
-            ->orderBy('nama_vendor')
-            ->get(['id_vendor', 'nama_vendor', 'kontak']);
-
         return Inertia::render('Pemeliharaan/Index', [
             'daftarPemeliharaan' => $daftarPemeliharaan,
             'daftarAset' => $daftarAset,
             'daftarTeknisi' => $daftarTeknisi,
-            'daftarVendor' => $daftarVendor,
             'tabAktif' => $tab,
             'filters' => [
                 'q' => $request->q ?? '',
@@ -127,7 +113,7 @@ class PemeliharaanController extends Controller
     }
 
     /**
-     * Tambahkan jadwal pemeliharaan baru.
+     * Tambahkan jadwal pemeliharaan baru dengan teknisi internal.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -135,28 +121,38 @@ class PemeliharaanController extends Controller
             'id_aset' => ['required', 'integer', 'exists:aset,id_aset'],
             'jenis_pemeliharaan' => ['required', 'string', 'max:150'],
             'tanggal_jadwal' => ['required', 'date'],
-            'tipe_pelaksana' => ['required', 'in:teknisi,vendor'],
-            'id_pelaksana' => ['required_if:tipe_pelaksana,teknisi', 'nullable', 'exists:pengguna,id_pengguna'],
-            'id_vendor' => ['required_if:tipe_pelaksana,vendor', 'nullable', 'exists:vendor,id_vendor'],
+            'id_pelaksana' => [
+                'required',
+                'integer',
+                'exists:pengguna,id_pengguna',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $isTeknisiAktif = User::query()
+                        ->where('id_pengguna', $value)
+                        ->where('is_aktif', true)
+                        ->whereHas('semuaPeran', fn ($q) => $q->where('nama_peran', PeranNama::TEKNISI))
+                        ->exists();
+
+                    if (! $isTeknisiAktif) {
+                        $fail('Teknisi yang dipilih tidak valid atau tidak berstatus aktif.');
+                    }
+                },
+            ],
             'uraian' => ['nullable', 'string', 'max:1000'],
             'biaya' => ['nullable', 'numeric', 'min:0'],
         ], [
             'id_aset.required' => 'Pilih aset yang akan dijadwalkan pemeliharaannya.',
             'jenis_pemeliharaan.required' => 'Jenis pemeliharaan wajib diisi.',
             'tanggal_jadwal.required' => 'Tanggal jadwal wajib ditentukan.',
-            'tipe_pelaksana.required' => 'Pilih pelaksana pemeliharaan.',
-            'id_pelaksana.required_if' => 'Pilih teknisi fakultas yang ditugaskan.',
-            'id_vendor.required_if' => 'Pilih vendor rekanan yang ditunjuk.',
+            'id_pelaksana.required' => 'Pilih teknisi fakultas yang ditugaskan.',
+            'id_pelaksana.exists' => 'Teknisi yang dipilih tidak ditemukan dalam sistem.',
         ]);
-
-        $perluVendor = $validated['tipe_pelaksana'] === 'vendor';
 
         $pemeliharaan = PemeliharaanAset::query()->create([
             'id_aset' => $validated['id_aset'],
             'jenis_pemeliharaan' => $validated['jenis_pemeliharaan'],
             'tanggal_jadwal' => $validated['tanggal_jadwal'],
-            'id_pelaksana' => $perluVendor ? null : $validated['id_pelaksana'],
-            'id_vendor' => $perluVendor ? $validated['id_vendor'] : null,
+            'id_pelaksana' => $validated['id_pelaksana'],
+            'id_vendor' => null,
             'status' => 'terjadwal',
             'uraian' => $validated['uraian'] ?? null,
             'biaya' => $validated['biaya'] ?? null,

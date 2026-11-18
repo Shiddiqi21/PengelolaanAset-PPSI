@@ -591,7 +591,7 @@ class AsetController extends Controller
             'penempatanAktif.penanggungJawab',
             'penempatan' => fn ($q) => $q->with(['ruangan.gedung', 'penanggungJawab'])->orderByDesc('tanggal_mulai')->orderByDesc('id_penempatan'),
             'perbaikan' => fn ($q) => $q->with(['pengajuan', 'teknisi', 'vendor'])->orderByDesc('id_item_perbaikan'),
-            'pemeliharaan' => fn ($q) => $q->with(['pelaksana', 'vendor'])->orderByDesc('tanggal_jadwal'),
+            'pemeliharaan' => fn ($q) => $q->with(['pelaksana', 'vendor'])->orderByRaw('COALESCE(tanggal_pelaksanaan, tanggal_jadwal) DESC')->orderByDesc('id_pemeliharaan'),
             'dokumen' => fn ($q) => $q->with('pengunggah')->orderByDesc('tanggal_unggah'),
         ]);
 
@@ -624,7 +624,7 @@ class AsetController extends Controller
 
             $dataPerbaikanBerjalan = [
                 'nomor' => $perbaikanAktif->pengajuan?->nomor_pengajuan ?? 'PRB-2026-0031',
-                'teknisi' => $perbaikanAktif->teknisi?->nama_lengkap ?? $perbaikanAktif->vendor?->nama_vendor ?? 'Belum ditugaskan',
+                'teknisi' => $perbaikanAktif->teknisi?->nama_lengkap ?? 'Belum ditugaskan',
                 'status' => "{$statusPerbaikanLabel} • {$tanggalPerbaikan}",
                 'catatan' => $perbaikanAktif->hasil_pemeriksaan
                     ?: $perbaikanAktif->deskripsi_kerusakan
@@ -684,16 +684,47 @@ class AsetController extends Controller
                 'aktif' => $p->tanggal_selesai === null,
                 'keterangan' => $p->keterangan,
             ])->values(),
-            'riwayat_pemeliharaan' => $aset->pemeliharaan->map(fn ($m) => [
-                'id' => 'pmh-'.$m->id_pemeliharaan,
-                'jenis' => $m->jenis_pemeliharaan,
-                'pelaksana' => $m->pelaksana?->nama_lengkap ?? $m->vendor?->nama_vendor ?? '-',
-                'tanggal' => $m->tanggal_pelaksanaan
-                    ? \Carbon\Carbon::parse($m->tanggal_pelaksanaan)->locale('id')->translatedFormat('j M Y')
-                    : \Carbon\Carbon::parse($m->tanggal_jadwal)->locale('id')->translatedFormat('j M Y'),
-                'status' => ucfirst(str_replace('_', ' ', $m->status)),
-                'biaya' => $m->biaya !== null ? self::formatRupiah((float) $m->biaya) : '-',
-            ])->values(),
+            'riwayat_pemeliharaan' => $aset->pemeliharaan->map(function ($m) {
+                $statusLabel = match ($m->status) {
+                    'terjadwal' => 'Terjadwal',
+                    'dalam_proses' => 'Sedang Dikerjakan',
+                    'selesai' => 'Selesai',
+                    'dibatalkan' => 'Dibatalkan',
+                    default => ucfirst(str_replace('_', ' ', $m->status)),
+                };
+
+                $statusNada = match ($m->status) {
+                    'terjadwal' => 'peringatan',
+                    'dalam_proses' => 'info',
+                    'selesai' => 'sukses',
+                    'dibatalkan' => 'bahaya',
+                    default => 'netral',
+                };
+
+                return [
+                    'id' => 'pmh-'.$m->id_pemeliharaan,
+                    'id_pemeliharaan' => $m->id_pemeliharaan,
+                    'jenis' => $m->jenis_pemeliharaan,
+                    'jenis_pemeliharaan' => $m->jenis_pemeliharaan,
+                    'pelaksana' => $m->pelaksana?->nama_lengkap ?? '-',
+                    'tipe_pelaksana' => $m->id_pelaksana ? 'Teknisi' : '-',
+                    'tanggal' => $m->tanggal_pelaksanaan
+                        ? \Carbon\Carbon::parse($m->tanggal_pelaksanaan)->locale('id')->translatedFormat('j M Y')
+                        : \Carbon\Carbon::parse($m->tanggal_jadwal)->locale('id')->translatedFormat('j M Y'),
+                    'tanggal_jadwal' => $m->tanggal_jadwal
+                        ? \Carbon\Carbon::parse($m->tanggal_jadwal)->locale('id')->translatedFormat('j M Y')
+                        : '-',
+                    'tanggal_pelaksanaan' => $m->tanggal_pelaksanaan
+                        ? \Carbon\Carbon::parse($m->tanggal_pelaksanaan)->locale('id')->translatedFormat('j M Y')
+                        : '-',
+                    'status' => $m->status,
+                    'status_label' => $statusLabel,
+                    'status_nada' => $statusNada,
+                    'uraian' => $m->uraian ?? '-',
+                    'biaya' => (float) ($m->biaya ?? 0),
+                    'biaya_label' => $m->biaya !== null && $m->biaya > 0 ? self::formatRupiah((float) $m->biaya) : '-',
+                ];
+            })->values(),
         ];
     }
 

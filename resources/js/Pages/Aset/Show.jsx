@@ -57,6 +57,8 @@ function IkonVisualAset({ fotoUrl, nama, onClick }) {
 export default function Show({ aset, modePemohon = false }) {
     const [tabAktif, setTabAktif] = useState('informasi');
     const [pratinjauFoto, setPratinjauFoto] = useState(false);
+    const [modalDetailPemeliharaan, setModalDetailPemeliharaan] = useState(false);
+    const [detailPemeliharaan, setDetailPemeliharaan] = useState(null);
 
     const kolomPengelolaan = [
         {
@@ -108,11 +110,69 @@ export default function Show({ aset, modePemohon = false }) {
     ];
 
     const kolomPemeliharaan = [
-        { kunci: 'tanggal', judul: 'Tanggal', className: 'font-semibold' },
-        { kunci: 'jenis', judul: 'Jenis pemeliharaan' },
-        { kunci: 'pelaksana', judul: 'Pelaksana' },
-        { kunci: 'status', judul: 'Status' },
-        { kunci: 'biaya', judul: 'Biaya' },
+        {
+            judul: 'Jenis Pemeliharaan',
+            render: (b) => (
+                <div>
+                    <p className="font-semibold text-ink-900">{b.jenis_pemeliharaan || b.jenis}</p>
+                    {b.uraian && b.uraian !== '-' && (
+                        <p className="text-xs text-ink-500 line-clamp-1 max-w-xs mt-0.5">{b.uraian}</p>
+                    )}
+                </div>
+            ),
+        },
+        {
+            judul: 'Jadwal',
+            className: 'whitespace-nowrap text-xs text-ink-600',
+            render: (b) => b.tanggal_jadwal ?? b.tanggal ?? '-',
+        },
+        {
+            judul: 'Realisasi',
+            className: 'whitespace-nowrap text-xs text-ink-800 font-medium',
+            render: (b) =>
+                b.tanggal_pelaksanaan && b.tanggal_pelaksanaan !== '-' ? (
+                    b.tanggal_pelaksanaan
+                ) : (
+                    <span className="text-ink-400 italic">Belum terlaksana</span>
+                ),
+        },
+        {
+            judul: 'Pelaksana',
+            render: (b) => (
+                <p className="font-medium text-ink-900 text-xs">{b.pelaksana}</p>
+            ),
+        },
+        {
+            judul: 'Biaya',
+            className: 'whitespace-nowrap text-xs',
+            render: (b) => (
+                <span className={b.biaya > 0 ? 'font-semibold text-ink-900' : 'text-ink-400'}>
+                    {b.biaya_label ?? b.biaya ?? '-'}
+                </span>
+            ),
+        },
+        {
+            judul: 'Status',
+            render: (b) => (
+                <Badge nada={b.status_nada ?? 'netral'}>{b.status_label ?? b.status}</Badge>
+            ),
+        },
+        {
+            judul: 'Aksi',
+            className: 'text-right whitespace-nowrap',
+            render: (b) => (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setDetailPemeliharaan(b);
+                        setModalDetailPemeliharaan(true);
+                    }}
+                    className="inline-flex items-center rounded-lg border border-line bg-white px-2.5 py-1 text-xs font-semibold text-ink-700 transition hover:bg-surface"
+                >
+                    Lihat detail
+                </button>
+            ),
+        },
     ];
 
     const kpiPenyusutan = [
@@ -425,6 +485,66 @@ export default function Show({ aset, modePemohon = false }) {
                         </div>
                     )}
                 </div>
+            </Modal>
+
+            {/* Modal Detail Catatan Pemeliharaan */}
+            <Modal show={modalDetailPemeliharaan} maxWidth="lg" onClose={() => setModalDetailPemeliharaan(false)}>
+                {detailPemeliharaan && (
+                    <div className="p-6">
+                        <div className="flex items-start justify-between border-b border-line pb-4">
+                            <div>
+                                <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
+                                    Catatan Pemeliharaan Aset
+                                </span>
+                                <h3 className="text-lg font-bold text-ink-900 mt-0.5">
+                                    {detailPemeliharaan.jenis_pemeliharaan || detailPemeliharaan.jenis}
+                                </h3>
+                                <p className="text-xs text-ink-600 mt-1">
+                                    Aset: <span className="font-medium text-ink-900">{aset.nama_barang}</span> ({aset.kode_aset})
+                                </p>
+                            </div>
+                            <Badge nada={detailPemeliharaan.status_nada}>{detailPemeliharaan.status_label}</Badge>
+                        </div>
+
+                        <div className="my-5 space-y-4 text-xs">
+                            <div className="grid grid-cols-2 gap-4 rounded-lg border border-line bg-surface p-3.5">
+                                <div>
+                                    <span className="text-ink-500 block">Target Tanggal Jadwal:</span>
+                                    <p className="font-semibold text-ink-900 mt-0.5">{detailPemeliharaan.tanggal_jadwal}</p>
+                                </div>
+                                <div>
+                                    <span className="text-ink-500 block">Realisasi Pelaksanaan:</span>
+                                    <p className="font-semibold text-ink-900 mt-0.5">
+                                        {detailPemeliharaan.tanggal_pelaksanaan !== '-' ? detailPemeliharaan.tanggal_pelaksanaan : 'Belum terlaksana'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-ink-500 block">Pelaksana:</span>
+                                    <p className="font-semibold text-ink-900 mt-0.5">
+                                        {detailPemeliharaan.pelaksana}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-ink-500 block">Biaya Riil:</span>
+                                    <p className="font-semibold text-brand-700 mt-0.5">{detailPemeliharaan.biaya_label || '-'}</p>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border border-line p-3.5 space-y-1">
+                                <span className="font-semibold text-ink-900 block">Uraian / Tindakan Pemeliharaan:</span>
+                                <p className="text-ink-800 whitespace-pre-wrap leading-relaxed mt-1">
+                                    {detailPemeliharaan.uraian || 'Tidak ada catatan uraian khusus.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end border-t border-line pt-4">
+                            <SecondaryButton type="button" onClick={() => setModalDetailPemeliharaan(false)}>
+                                Tutup
+                            </SecondaryButton>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </AuthenticatedLayout>
     );

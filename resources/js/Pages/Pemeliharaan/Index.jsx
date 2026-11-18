@@ -27,7 +27,7 @@ function formatRupiah(angka) {
     }).format(angka);
 }
 
-export default function Index({ daftarPemeliharaan, daftarAset = [], daftarTeknisi = [], daftarVendor = [], tabAktif, filters }) {
+export default function Index({ daftarPemeliharaan, daftarAset = [], daftarTeknisi = [], tabAktif, filters }) {
     const [q, setQ] = useState(filters.q || '');
     const [modalTambahBuka, setModalTambahBuka] = useState(false);
     const [modalUpdateBuka, setModalUpdateBuka] = useState(false);
@@ -39,9 +39,7 @@ export default function Index({ daftarPemeliharaan, daftarAset = [], daftarTekni
         id_aset: daftarAset[0]?.id_aset ? String(daftarAset[0].id_aset) : '',
         jenis_pemeliharaan: '',
         tanggal_jadwal: '',
-        tipe_pelaksana: 'teknisi',
         id_pelaksana: daftarTeknisi[0]?.id_pengguna ? String(daftarTeknisi[0].id_pengguna) : '',
-        id_vendor: daftarVendor[0]?.id_vendor ? String(daftarVendor[0].id_vendor) : '',
         uraian: '',
         biaya: '',
     });
@@ -297,68 +295,22 @@ export default function Index({ daftarPemeliharaan, daftarAset = [], daftarTekni
                             />
                         </Field>
 
-                        <Field label="Pilih Pelaksana Kegiatan">
-                            <div className="grid grid-cols-2 gap-3">
-                                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-line p-3">
-                                    <input
-                                        type="radio"
-                                        name="tipe_pelaksana"
-                                        value="teknisi"
-                                        checked={formTambah.data.tipe_pelaksana === 'teknisi'}
-                                        onChange={(e) => formTambah.setData('tipe_pelaksana', e.target.value)}
-                                        className="text-brand-600 focus:ring-brand-600"
-                                    />
-                                    <span className="text-xs font-semibold text-ink-900">Teknisi Fakultas</span>
-                                </label>
-                                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-line p-3">
-                                    <input
-                                        type="radio"
-                                        name="tipe_pelaksana"
-                                        value="vendor"
-                                        checked={formTambah.data.tipe_pelaksana === 'vendor'}
-                                        onChange={(e) => formTambah.setData('tipe_pelaksana', e.target.value)}
-                                        className="text-brand-600 focus:ring-brand-600"
-                                    />
-                                    <span className="text-xs font-semibold text-ink-900">Vendor Eksternal</span>
-                                </label>
-                            </div>
+                        <Field label="Teknisi Pelaksana" htmlFor="id_pelaksana" error={formTambah.errors.id_pelaksana}>
+                            <SelectInput
+                                id="id_pelaksana"
+                                className="block w-full"
+                                value={formTambah.data.id_pelaksana}
+                                onChange={(e) => formTambah.setData('id_pelaksana', e.target.value)}
+                                required
+                            >
+                                <option value="">-- Pilih teknisi --</option>
+                                {daftarTeknisi.map((t) => (
+                                    <option key={t.id_pengguna} value={t.id_pengguna}>
+                                        {t.nama_lengkap} (NIP: {t.nip || '-'})
+                                    </option>
+                                ))}
+                            </SelectInput>
                         </Field>
-
-                        {formTambah.data.tipe_pelaksana === 'teknisi' ? (
-                            <Field label="Teknisi Pelaksana" htmlFor="id_pelaksana" error={formTambah.errors.id_pelaksana}>
-                                <SelectInput
-                                    id="id_pelaksana"
-                                    className="block w-full"
-                                    value={formTambah.data.id_pelaksana}
-                                    onChange={(e) => formTambah.setData('id_pelaksana', e.target.value)}
-                                    required
-                                >
-                                    <option value="">-- Pilih teknisi --</option>
-                                    {daftarTeknisi.map((t) => (
-                                        <option key={t.id_pengguna} value={t.id_pengguna}>
-                                            {t.nama_lengkap} (NIP: {t.nip || '-'})
-                                        </option>
-                                    ))}
-                                </SelectInput>
-                            </Field>
-                        ) : (
-                            <Field label="Vendor Rekanan" htmlFor="id_vendor" error={formTambah.errors.id_vendor}>
-                                <SelectInput
-                                    id="id_vendor"
-                                    className="block w-full"
-                                    value={formTambah.data.id_vendor}
-                                    onChange={(e) => formTambah.setData('id_vendor', e.target.value)}
-                                    required
-                                >
-                                    <option value="">-- Pilih vendor --</option>
-                                    {daftarVendor.map((v) => (
-                                        <option key={v.id_vendor} value={v.id_vendor}>
-                                            {v.nama_vendor}
-                                        </option>
-                                    ))}
-                                </SelectInput>
-                            </Field>
-                        )}
 
                         <Field label="Estimasi Anggaran (Opsional)" htmlFor="biaya" error={formTambah.errors.biaya}>
                             <TextInput
