@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\AsetController;
+use App\Http\Controllers\CetakLabelController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\KartuKendaliController;
+use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\LokasiController;
 use App\Http\Controllers\ModulBelumTersediaController;
 use App\Http\Controllers\PengadaanController;
@@ -49,10 +52,10 @@ Route::middleware('role:operator')->group(function () use ($sementara) {
     Route::get('/penghapusan', $sementara)->defaults('judul', 'Penghapusan aset')->name('penghapusan.index');
     Route::get('/perbaikan', $sementara)->defaults('judul', 'Perbaikan aset')->name('perbaikan.index');
     Route::get('/pemeliharaan', $sementara)->defaults('judul', 'Pemeliharaan')->name('pemeliharaan.index');
-    Route::get('/cetak-label', $sementara)->defaults('judul', 'Cetak label aset')->name('label.index');
-    Route::get('/kartu-kendali', $sementara)->defaults('judul', 'Kartu kendali ruangan')->name('kartu-kendali.index');
+    Route::get('/cetak-label', [CetakLabelController::class, 'index'])->name('label.index');
+    Route::get('/kartu-kendali', [KartuKendaliController::class, 'index'])->name('kartu-kendali.index');
     Route::get('/arsip-bast', $sementara)->defaults('judul', 'Arsip BAST')->name('bast.index');
-    Route::get('/laporan', $sementara)->defaults('judul', 'Laporan & rekonsiliasi')->name('laporan.index');
+    Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
 });
 
 Route::middleware('role:pimpinan')->prefix('pimpinan')->group(function () use ($sementara) {
@@ -60,7 +63,8 @@ Route::middleware('role:pimpinan')->prefix('pimpinan')->group(function () use ($
     Route::get('/persetujuan', [PengajuanController::class, 'indexPimpinan'])->name('pimpinan.persetujuan');
     Route::get('/persetujuan/{pengajuan}', [PengajuanController::class, 'showPimpinan'])->name('pimpinan.persetujuan.show');
     Route::post('/persetujuan/{pengajuan}', [PengajuanController::class, 'prosesPimpinan'])->name('pimpinan.persetujuan.proses');
-    Route::get('/laporan', $sementara)->defaults('judul', 'Laporan aset')->name('pimpinan.laporan');
+    Route::get('/laporan', [LaporanController::class, 'pimpinan'])->name('pimpinan.laporan');
+    Route::get('/laporan/pratinjau', [LaporanController::class, 'pratinjau'])->name('pimpinan.laporan.pratinjau');
 });
 
 Route::middleware('role:kepala-kantor')->prefix('kepala-kantor')->group(function () use ($sementara) {
@@ -68,7 +72,7 @@ Route::middleware('role:kepala-kantor')->prefix('kepala-kantor')->group(function
     Route::get('/pengajuan', [PengajuanController::class, 'indexKepalaKantor'])->name('kepala-kantor.pengajuan');
     Route::get('/pengajuan/{pengajuan}', [PengajuanController::class, 'showKepalaKantor'])->name('kepala-kantor.pengajuan.show');
     Route::post('/pengajuan/{pengajuan}', [PengajuanController::class, 'prosesKepalaKantor'])->name('kepala-kantor.pengajuan.proses');
-    Route::get('/laporan', $sementara)->defaults('judul', 'Laporan aset')->name('kepala-kantor.laporan');
+    Route::get('/laporan', [LaporanController::class, 'kepalaKantor'])->name('kepala-kantor.laporan');
 });
 
 Route::middleware('role:pemohon')->prefix('pemohon')->group(function () use ($sementara) {
