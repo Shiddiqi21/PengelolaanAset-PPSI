@@ -251,11 +251,6 @@ class BastController extends Controller
                 $idPengajuan = $penerimaan?->id_pengajuan;
             }
 
-            // Fallback id_pengajuan jika tidak ada pengajuan terikat
-            if (empty($idPengajuan)) {
-                $idPengajuan = Pengajuan::query()->value('id_pengajuan');
-            }
-
             $bast = new BeritaAcara();
             $bast->nomor_bast = $nomorBast;
             $bast->jenis_bast = $request->jenis_bast;
