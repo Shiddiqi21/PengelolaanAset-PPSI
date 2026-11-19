@@ -527,11 +527,6 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
                                     </div>
                                 )}
                             </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
 
                             {/* Dokumen Terlampir */}
                             <div className="rounded-lg border border-line p-3">
