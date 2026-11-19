@@ -323,8 +323,13 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
 
                         <div className="my-5 space-y-4">
                             <div className="rounded-lg border border-line bg-surface p-4 text-xs leading-relaxed text-ink-900">
-                                <p className="font-semibold text-ink-600">Perihal / Keterangan Usulan:</p>
-                                <p className="mt-1">{targetPengajuan.keterangan_singkat}</p>
+                                <p className="font-semibold text-ink-600 uppercase tracking-wider">Perihal & Keterangan Usulan:</p>
+                                <p className="mt-1 font-medium text-ink-900">{targetPengajuan.keterangan_singkat}</p>
+                                {targetPengajuan.keterangan && targetPengajuan.keterangan !== targetPengajuan.keterangan_singkat && (
+                                    <pre className="mt-2 border-t border-line/60 pt-2 font-sans whitespace-pre-wrap text-ink-700">
+                                        {targetPengajuan.keterangan}
+                                    </pre>
+                                )}
                                 {targetPengajuan.jenis_pengajuan === 'mutasi' ? (
                                     <p className="mt-2 text-xs font-semibold text-brand-700">
                                         Jenis: Pengajuan Mutasi Aset (Non-anggaran)
@@ -334,9 +339,11 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
                                         Jenis: Pengajuan Penghapusan Aset (Nilai Buku: {formatRupiah(targetPengajuan.total_nilai_perolehan || 0)})
                                     </p>
                                 ) : (
-                                    <p className="mt-2 font-semibold text-brand-700">
-                                        Total Estimasi: {formatRupiah(targetPengajuan.total_estimasi)}
-                                    </p>
+                                    targetPengajuan.total_estimasi > 0 && (
+                                        <p className="mt-2 font-semibold text-brand-700">
+                                            Total Estimasi: {formatRupiah(targetPengajuan.total_estimasi)}
+                                        </p>
+                                    )
                                 )}
                             </div>
 
@@ -451,6 +458,9 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
                                                         {item.kode_aset && item.kode_aset !== '-' && (
                                                             <span className="ml-2 font-mono text-[11px] text-ink-500">({item.kode_aset})</span>
                                                         )}
+                                                        {item.merek_tipe && item.merek_tipe !== '-' && (
+                                                            <span className="ml-1 text-ink-500">({item.merek_tipe})</span>
+                                                        )}
                                                     </div>
                                                     <span className="font-semibold text-brand-700">
                                                         {formatRupiah(item.estimasi_biaya || item.subtotal)}
@@ -459,6 +469,14 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
                                                 <p className="mt-1 text-[11px] text-ink-600">
                                                     <span className="font-semibold text-ink-700">Gejala Kerusakan:</span> {item.spesifikasi || item.deskripsi_kerusakan || '-'}
                                                 </p>
+                                                {item.foto_url && (
+                                                    <div className="mt-2 border-t border-line/60 pt-2">
+                                                        <a href={item.foto_url} target="_blank" rel="noopener noreferrer" className="inline-block group">
+                                                            <img src={item.foto_url} alt="Foto Kerusakan" className="h-20 w-20 rounded-lg object-cover border border-line group-hover:opacity-90 shadow-sm" />
+                                                            <span className="block text-[11px] text-brand-600 group-hover:underline mt-1 font-medium">Lihat foto ↗</span>
+                                                        </a>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -504,6 +522,11 @@ export default function PemeriksaanIndex({ daftarPemeriksaan, detailAktif, tabAk
                                                     <p className="text-[11px] text-ink-500">{item.spesifikasi || '-'}</p>
                                                 </div>
                                                 <span className="font-semibold text-ink-900">{item.jumlah || 1} unit</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                                             </div>
                                         ))}
                                     </div>

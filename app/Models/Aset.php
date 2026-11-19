@@ -52,7 +52,36 @@ class Aset extends Model
 
     public function penempatanAktif()
     {
-        return $this->hasOne(PenempatanAset::class, 'id_aset', 'id_aset')->whereNull('tanggal_selesai');
+        return $this->hasOne(PenempatanAset::class, 'id_aset', 'id_aset')
+            ->whereNull('tanggal_selesai')
+            ->latestOfMany('id_penempatan');
+    }
+
+    /**
+     * Hitung penyusutan garis lurus dan nilai buku secara dinamis sesuai aturan bisnis PRD.
+     *
+     * @return array{harga_perolehan: float, masa_manfaat_tahun: int, umur_pemakaian: int, penyusutan_per_tahun: float, akumulasi_penyusutan: float, nilai_buku: float}
+     */
+    public function hitungPenyusutan(?int $tahunBerjalan = null): array
+    {
+        $tahunBerjalan ??= (int) now()->year;
+        $harga = (float) ($this->harga_perolehan ?? 0);
+        $masaManfaat = max(1, (int) ($this->kategori?->masa_manfaat_tahun ?? 4));
+        $tahunPerolehan = (int) ($this->tahun_perolehan ?: $tahunBerjalan);
+
+        $penyusutanPerTahun = $harga / $masaManfaat;
+        $umurPemakaian = min(max($tahunBerjalan - $tahunPerolehan, 0), $masaManfaat);
+        $akumulasiPenyusutan = $umurPemakaian * $penyusutanPerTahun;
+        $nilaiBuku = max(0.0, $harga - $akumulasiPenyusutan);
+
+        return [
+            'harga_perolehan' => $harga,
+            'masa_manfaat_tahun' => $masaManfaat,
+            'umur_pemakaian' => $umurPemakaian,
+            'penyusutan_per_tahun' => round($penyusutanPerTahun, 2),
+            'akumulasi_penyusutan' => round($akumulasiPenyusutan, 2),
+            'nilai_buku' => round($nilaiBuku, 2),
+        ];
     }
 
     public function perbaikan()
@@ -78,5 +107,50 @@ class Aset extends Model
     public function dokumen()
     {
         return $this->hasMany(Dokumen::class, 'id_aset', 'id_aset');
+    }
+
+    /**
+     * Ekstrak metadata tambahan perolehan (tanggal_perolehan, sumber_dana, nomor_dokumen_sumber, catatan)
+     * yang disimpan di kolom spesifikasi tanpa mengubah skema tabel ERD.
+     *
+     * @return array{tanggal_perolehan: string, sumber_dana: string, nomor_dokumen_sumber: string, catatan: string}
+     */
+    public function metaPerolehan(): array
+    {
+        $tahun = $this->tahun_perolehan ?: (int) now()->year;
+        $default = [
+            'tanggal_perolehan' => "12 September {$tahun}",
+            'sumber_dana' => "RKAT FTI {$tahun}",
+            'nomor_dokumen_sumber' => "TER-{$tahun}-0021",
+            'catatan' => (string) ($this->spesifikasi ?? ''),
+        ];
+
+        if (! $this->spesifikasi) {
+            return $default;
+        }
+
+        $decoded = json_decode($this->spesifikasi, true);
+        if (is_array($decoded)) {
+            return [
+                'tanggal_perolehan' => (string) ($decoded['tanggal_perolehan'] ?? $default['tanggal_perolehan']),
+                'sumber_dana' => (string) ($decoded['sumber_dana'] ?? $default['sumber_dana']),
+                'nomor_dokumen_sumber' => (string) ($decoded['nomor_dokumen_sumber'] ?? $default['nomor_dokumen_sumber']),
+                'catatan' => (string) ($decoded['catatan'] ?? ''),
+            ];
+        }
+
+        return $default;
+    }
+
+    /**
+     * Nomor Urut Pendaftaran (NUP) dari akhiran kode_aset (contoh: FTI-2023-0042 -> 42).
+     */
+    public function nup(): string
+    {
+        if (preg_match('/(\d+)$/', (string) $this->kode_aset, $m)) {
+            return (string) ((int) $m[1]);
+        }
+
+        return (string) $this->id_aset;
     }
 }

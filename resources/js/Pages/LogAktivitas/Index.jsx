@@ -23,6 +23,19 @@ const AKSI = {
     reset_password: ['Reset sandi', 'peringatan'],
     ubah_password: ['Ubah sandi', 'peringatan'],
     ubah_peran: ['Ubah peran', 'info'],
+    kirim: ['Kirim pengajuan', 'info'],
+    verifikasi: ['Verifikasi', 'info'],
+    rekomendasi: ['Rekomendasi', 'info'],
+    persetujuan: ['Persetujuan', 'sukses'],
+    penolakan: ['Penolakan', 'bahaya'],
+    kembalikan: ['Kembalikan revisi', 'peringatan'],
+    ubah_status: ['Ubah status', 'info'],
+    perolehan_aset: ['Perolehan aset', 'sukses'],
+    perbarui_inventaris: ['Perbarui aset', 'info'],
+    ekspor_aset: ['Ekspor aset', 'netral'],
+    impor_aset: ['Impor aset', 'sukses'],
+    penetapan_pj_ruangan: ['Penetapan PJ ruangan', 'info'],
+    ekspor_lokasi: ['Ekspor lokasi', 'netral'],
 };
 
 const labelAksi = (aksi) => AKSI[aksi]?.[0] ?? aksi;

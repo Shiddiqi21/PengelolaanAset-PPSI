@@ -65,6 +65,8 @@ class PengajuanController extends Controller
                 'jenis_label' => ucfirst($p->jenis_pengajuan),
                 'tanggal_pengajuan' => $p->tanggal_pengajuan?->format('d M Y') ?? '-',
                 'keterangan_singkat' => $this->ambilPerihal($p->keterangan),
+                'keterangan' => $p->keterangan,
+                'items' => $this->formatItems($p),
                 'total_estimasi' => $totalEstimasi,
                 'status' => $p->status,
                 'is_revisi' => $isRevisi,
@@ -671,6 +673,59 @@ class PengajuanController extends Controller
     // ─────────────────────────────────────────────────────────────
     // HELPER & FORMATTER
     // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Format rincian item pengajuan sesuai jenisnya.
+     */
+    public function formatItems(Pengajuan $pengajuan): \Illuminate\Support\Collection
+    {
+        return match ($pengajuan->jenis_pengajuan) {
+            'pengadaan' => $pengajuan->itemPengadaan->map(fn ($item) => [
+                'id' => $item->id_item_pengadaan,
+                'kategori' => $item->kategori?->nama_kategori ?? '-',
+                'nama_barang' => $item->nama_barang,
+                'spesifikasi' => $item->spesifikasi,
+                'jumlah' => $item->jumlah,
+                'harga_satuan' => $item->jumlah > 0 ? (float) $item->estimasi_anggaran / $item->jumlah : (float) $item->estimasi_anggaran,
+                'subtotal' => (float) $item->estimasi_anggaran,
+            ])->values(),
+            'perbaikan' => $pengajuan->itemPerbaikan->map(fn ($item) => [
+                'id' => $item->id_item_perbaikan,
+                'kategori' => 'Perbaikan Aset',
+                'nama_barang' => $item->aset?->nama_barang ?? "Aset #{$item->id_aset}",
+                'kode_aset' => $item->aset?->kode_aset ?? '-',
+                'merek_tipe' => $item->aset?->merek_tipe ?? '-',
+                'kondisi' => $item->aset?->kondisi ?? '-',
+                'spesifikasi' => $item->deskripsi_kerusakan,
+                'foto_url' => $item->foto_kerusakan_path ? asset('storage/' . $item->foto_kerusakan_path) : null,
+                'status_perbaikan' => $item->status_perbaikan,
+                'jumlah' => 1,
+                'harga_satuan' => (float) ($item->estimasi_biaya ?? 0),
+                'subtotal' => (float) ($item->estimasi_biaya ?? 0),
+            ])->values(),
+            'mutasi' => $pengajuan->itemMutasi->map(fn ($item) => [
+                'id' => $item->id_item_mutasi,
+                'kategori' => 'Mutasi Aset',
+                'nama_barang' => $item->aset?->nama_barang ?? "Aset #{$item->id_aset}",
+                'kode_aset' => $item->aset?->kode_aset ?? '-',
+                'spesifikasi' => 'Tujuan: ' . ($item->ruanganTujuan?->nama_ruangan ?? '-'),
+                'jumlah' => 1,
+                'harga_satuan' => 0,
+                'subtotal' => 0,
+            ])->values(),
+            'penghapusan' => $pengajuan->itemPenghapusan->map(fn ($item) => [
+                'id' => $item->id_item_penghapusan,
+                'kategori' => 'Penghapusan Aset',
+                'nama_barang' => $item->aset?->nama_barang ?? "Aset #{$item->id_aset}",
+                'kode_aset' => $item->aset?->kode_aset ?? '-',
+                'spesifikasi' => "Jalur: {$item->jalur_penghapusan}" . ($item->catatan_tim_penilai ? " — {$item->catatan_tim_penilai}" : ''),
+                'jumlah' => 1,
+                'harga_satuan' => (float) $item->nilai_penjualan,
+                'subtotal' => (float) $item->nilai_penjualan,
+            ])->values(),
+            default => collect(),
+        };
+    }
 
     /**
      * Format detail pengajuan lengkap beserta relasi lintas jenis.

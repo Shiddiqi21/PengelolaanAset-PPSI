@@ -14,8 +14,28 @@ import TautanAksi from '@/Components/ui/TautanAksi';
 import PrimaryButton from '@/Components/PrimaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 
-export default function Pimpinan({ judul, deskripsi, banner, kpi, grafik, kondisi, persetujuan }) {
+export default function Pimpinan({ judul, deskripsi, banner, kpi, grafik, kondisi, persetujuan = [] }) {
+    const [kataKunci, setKataKunci] = useState('');
+    const [filterJenis, setFilterJenis] = useState('Semua jenis');
+
+    const persetujuanTersaring = useMemo(() => {
+        return persetujuan.filter((item) => {
+            const cocokQ =
+                !kataKunci ||
+                String(item.nomor || '').toLowerCase().includes(kataKunci.toLowerCase()) ||
+                String(item.jenis || '').toLowerCase().includes(kataKunci.toLowerCase()) ||
+                String(item.pemohon || '').toLowerCase().includes(kataKunci.toLowerCase());
+
+            const cocokJenis =
+                filterJenis === 'Semua jenis' ||
+                String(item.jenis || '').toLowerCase().startsWith(filterJenis.toLowerCase());
+
+            return cocokQ && cocokJenis;
+        });
+    }, [persetujuan, kataKunci, filterJenis]);
+
     const kolom = [
         { kunci: 'nomor', judul: 'Nomor pengajuan', className: 'font-semibold' },
         { kunci: 'jenis', judul: 'Jenis / perihal' },
@@ -30,7 +50,9 @@ export default function Pimpinan({ judul, deskripsi, banner, kpi, grafik, kondis
             <Head title="Dashboard pimpinan" />
 
             <PageHeader breadcrumb={['FTI', 'Dashboard']} judul={judul} deskripsi={deskripsi}>
-                <PrimaryButton type="button">↓ Unduh ringkasan</PrimaryButton>
+                <PrimaryButton type="button" onClick={() => window.print()}>
+                    ↓ Unduh ringkasan
+                </PrimaryButton>
             </PageHeader>
 
             {banner && <Alert nada={banner.nada} className="mb-6">{banner.teks}</Alert>}
@@ -62,15 +84,31 @@ export default function Pimpinan({ judul, deskripsi, banner, kpi, grafik, kondis
                 className="mt-6"
             >
                 <div className="flex flex-wrap gap-3 px-6 pb-4 pt-4">
-                    <SearchInput className="min-w-[14rem] flex-1" placeholder="Cari nomor pengajuan..." aria-label="Cari nomor pengajuan" />
-                    <SelectInput aria-label="Jenis pengajuan">
-                        <option>Semua jenis</option>
-                        <option>Pengadaan</option>
-                        <option>Perbaikan</option>
+                    <SearchInput
+                        value={kataKunci}
+                        onChange={(e) => setKataKunci(e.target.value)}
+                        className="min-w-[14rem] flex-1"
+                        placeholder="Cari nomor pengajuan..."
+                        aria-label="Cari nomor pengajuan"
+                    />
+                    <SelectInput
+                        value={filterJenis}
+                        onChange={(e) => setFilterJenis(e.target.value)}
+                        aria-label="Jenis pengajuan"
+                    >
+                        <option value="Semua jenis">Semua jenis</option>
+                        <option value="Pengadaan">Pengadaan</option>
+                        <option value="Perbaikan">Perbaikan</option>
+                        <option value="Mutasi">Mutasi</option>
+                        <option value="Penghapusan">Penghapusan</option>
                     </SelectInput>
                 </div>
-                <DataTable kolom={kolom} baris={persetujuan} kunciBaris="nomor" />
-                <Pagination from={1} to={persetujuan.length} total={persetujuan.length} />
+                <DataTable kolom={kolom} baris={persetujuanTersaring} kunciBaris="nomor" />
+                <Pagination
+                    from={persetujuanTersaring.length > 0 ? 1 : 0}
+                    to={persetujuanTersaring.length}
+                    total={persetujuanTersaring.length}
+                />
             </Card>
 
             <CatatanDataContoh />
