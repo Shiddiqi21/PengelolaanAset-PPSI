@@ -230,11 +230,12 @@ export default function Index({
                     <div className="rounded-2xl border border-line bg-white p-8 sm:p-12 md:p-14 shadow-xs">
                         {/* Kop Dokumen Resmi */}
                         <div className="flex items-start gap-4 pb-3">
-                            <div className="flex-shrink-0 text-ink-900 pt-1">
-                                {/* Ikon Gedung / Universitas Yunani */}
-                                <svg className="h-12 w-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M4 18h16M4 10h16M12 3l9 5H3l9-5zM6 10v8M10 10v8M14 10v8M18 10v8" />
-                                </svg>
+                            <div className="flex-shrink-0 pt-1">
+                                <img
+                                    src="/images/logo-fti-ikon.png"
+                                    alt="Logo FTI Universitas Andalas"
+                                    className="h-12 w-12 object-contain"
+                                />
                             </div>
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-bold tracking-wide text-ink-900 uppercase">

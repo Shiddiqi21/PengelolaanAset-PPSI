@@ -23,15 +23,19 @@ class MenuDanHalamanTest extends TestCase
     {
         return [
             'operator' => [PeranNama::OPERATOR, '/operator', [
-                'Dashboard', 'Master aset', 'Lokasi & penanggung jawab', 'Pemeriksaan pengajuan', 'Penerimaan aset',
-                'Mutasi aset', 'Penghapusan aset', 'Perbaikan aset', 'Pemeliharaan', 'Cetak label aset',
-                'Kartu kendali ruangan', 'Pengguna & hak akses', 'Arsip BAST', 'Laporan & rekonsiliasi',
+                'Dashboard',
+                'Master aset', 'Lokasi & penanggung jawab', 'Cetak label aset', 'Kartu kendali ruangan',
+                'Pemeriksaan pengajuan', 'Penerimaan aset', 'Mutasi aset', 'Penghapusan aset',
+                'Perbaikan aset', 'Pemeliharaan',
+                'Arsip BAST', 'Laporan & rekonsiliasi',
+                'Pengguna & hak akses',
             ]],
             'pimpinan' => [PeranNama::PIMPINAN, '/pimpinan', ['Dashboard', 'Persetujuan pengajuan', 'Laporan aset']],
             'kepala kantor' => [PeranNama::KEPALA_KANTOR, '/kepala-kantor', ['Dashboard', 'Daftar pengajuan', 'Laporan aset']],
             'pemohon' => [PeranNama::PEMOHON, '/pemohon', [
-                'Dashboard', 'Daftar aset unit', 'Pengajuan pengadaan', 'Pengajuan perbaikan', 'Pengajuan mutasi',
-                'Pengajuan penghapusan', 'Daftar pengajuan', 'Riwayat perpindahan',
+                'Dashboard',
+                'Daftar aset unit', 'Riwayat perpindahan',
+                'Daftar pengajuan', 'Pengajuan pengadaan', 'Pengajuan perbaikan', 'Pengajuan mutasi', 'Pengajuan penghapusan',
             ]],
             'pegawai' => [PeranNama::PEGAWAI, '/pegawai', ['Dashboard', 'Aset tanggung jawab pribadi']],
             'teknisi' => [PeranNama::TEKNISI, '/teknisi', ['Dashboard', 'Tugas perbaikan', 'Riwayat pekerjaan']],
@@ -157,6 +161,61 @@ class MenuDanHalamanTest extends TestCase
     public function test_component_gallery_is_only_available_in_local(): void
     {
         $this->actingAs($this->akun(PeranNama::PEGAWAI))->get('/komponen')->assertNotFound();
+    }
+
+    public function test_operator_and_pemohon_menus_are_grouped_logically(): void
+    {
+        $this->actingAs($this->akun(PeranNama::OPERATOR))->get('/operator')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('menu', function ($menu) {
+                $item = collect($menu[0]['item']);
+                $grupUnik = $item->pluck('grup')->filter()->unique()->values()->all();
+
+                return $item->first()['label'] === 'Dashboard'
+                    && $item->first()['grup'] === null
+                    && $grupUnik === [
+                        'Data & Inventaris',
+                        'Pengajuan & Siklus Aset',
+                        'Perawatan Aset',
+                        'Dokumen & Laporan',
+                        'Administrasi',
+                    ]
+                    && $item->firstWhere('label', 'Pengguna & hak akses')['grup'] === 'Administrasi';
+            }));
+
+        $this->actingAs($this->akun(PeranNama::PEMOHON))->get('/pemohon')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('menu', function ($menu) {
+                $item = collect($menu[0]['item']);
+                $grupUnik = $item->pluck('grup')->filter()->unique()->values()->all();
+                $grupPengajuan = $item
+                    ->filter(fn ($m) => in_array($m['label'], [
+                        'Daftar pengajuan',
+                        'Pengajuan pengadaan',
+                        'Pengajuan perbaikan',
+                        'Pengajuan mutasi',
+                        'Pengajuan penghapusan',
+                    ], true))
+                    ->pluck('grup')
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                return $item->first()['label'] === 'Dashboard'
+                    && $item->first()['grup'] === null
+                    && $grupUnik === ['Inventaris Unit', 'Pengajuan']
+                    && $item->firstWhere('label', 'Riwayat perpindahan')['grup'] === 'Inventaris Unit'
+                    && $grupPengajuan === ['Pengajuan'];
+            }));
+
+        foreach ([
+            [PeranNama::PEGAWAI, '/pegawai'],
+            [PeranNama::TEKNISI, '/teknisi'],
+        ] as [$peran, $url]) {
+            $this->actingAs($this->akun($peran))->get($url)->assertOk()
+                ->assertInertia(fn (Assert $page) => $page->where(
+                    'menu',
+                    fn ($menu) => collect($menu[0]['item'])->every(fn ($m) => $m['grup'] === null)
+                ));
+        }
     }
 
     private function akun(string $namaPeran): User

@@ -142,13 +142,33 @@
 <body>
 
     <!-- KOP SURAT FTI UNAND -->
+    @php
+        $logoPath = public_path('images/logo-fti-ikon.png');
+        $logoBase64 = (extension_loaded('gd') && file_exists($logoPath))
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath))
+            : null;
+    @endphp
     <div class="header">
-        <p class="univ-title">Kementerian Pendidikan Tinggi, Sains, dan Teknologi</p>
-        <p class="univ-title" style="font-weight: bold;">Universitas Andalas</p>
-        <p class="faculty-title">Fakultas Teknologi Informasi</p>
-        <p class="contact-info">
-            Gedung FTI Kampus Limau Manis, Padang 25163 • Laman: https://fti.unand.ac.id • Pos-el: fti@unand.ac.id
-        </p>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                @if($logoBase64)
+                    <td style="width: 58px; vertical-align: middle; text-align: left;">
+                        <img src="{{ $logoBase64 }}" alt="Logo FTI" style="width: 48px; height: 48px;">
+                    </td>
+                @endif
+                <td style="vertical-align: middle; text-align: center;">
+                    <p class="univ-title">Kementerian Pendidikan Tinggi, Sains, dan Teknologi</p>
+                    <p class="univ-title" style="font-weight: bold;">Universitas Andalas</p>
+                    <p class="faculty-title">Fakultas Teknologi Informasi</p>
+                    <p class="contact-info">
+                        Gedung FTI Kampus Limau Manis, Padang 25163 • Laman: https://fti.unand.ac.id • Pos-el: fti@unand.ac.id
+                    </p>
+                </td>
+                @if($logoBase64)
+                    <td style="width: 58px;"></td>
+                @endif
+            </tr>
+        </table>
     </div>
 
     <!-- JUDUL DOKUMEN -->

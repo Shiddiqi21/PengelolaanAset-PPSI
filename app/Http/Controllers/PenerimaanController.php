@@ -76,7 +76,7 @@ class PenerimaanController extends Controller
                     ->orWhere('catatan', 'like', "%{$q}%")
                     ->orWhereHas('pengajuan', function ($p) use ($q) {
                         $p->where('nomor_pengajuan', 'like', "%{$q}%")
-                            ->orWhere('perihal', 'like', "%{$q}%");
+                            ->orWhere('keterangan', 'like', "%{$q}%");
                     })
                     ->orWhereHas('vendor', function ($v) use ($q) {
                         $v->where('nama_vendor', 'like', "%{$q}%");

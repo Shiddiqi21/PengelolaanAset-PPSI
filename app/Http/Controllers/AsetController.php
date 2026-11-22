@@ -208,6 +208,128 @@ class AsetController extends Controller
         ]);
     }
 
+    public function riwayatPerpindahan(Request $request): Response
+    {
+        $filter = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'in:aktif,selesai'],
+        ]);
+
+        $user = $request->user()?->loadMissing('unit');
+        $namaUnit = $user?->unit?->nama_unit ?? 'Fakultas Teknologi Informasi';
+        $namaUnitRingkas = preg_replace('/^(Departemen|Program Studi|Fakultas)\s+/i', '', $namaUnit) ?: $namaUnit;
+
+        $queryBasis = PenempatanAset::query()
+            ->with([
+                'aset.kategori:id_kategori,kode_kategori,nama_kategori',
+                'ruangan.gedung:id_gedung,nama_gedung',
+                'penanggungJawab:id_pengguna,nama_lengkap',
+                'itemMutasi.pengajuan:id_pengajuan,id_pemohon,nomor_pengajuan',
+            ]);
+
+        if (! empty($user?->id_unit)) {
+            $queryBasis->where(function (Builder $q) use ($user) {
+                $q->whereHas('ruangan', fn (Builder $qr) => $qr->where('id_unit', $user->id_unit))
+                    ->orWhere('id_pengguna_pj', $user->id_pengguna)
+                    ->orWhereHas('itemMutasi.pengajuan', fn (Builder $qp) => $qp->where('id_pemohon', $user->id_pengguna));
+            });
+        }
+
+        $totalPencatatan = (clone $queryBasis)->count();
+        $penempatanAktif = (clone $queryBasis)->whereNull('tanggal_selesai')->count();
+        $selesaiBerpindah = (clone $queryBasis)->whereNotNull('tanggal_selesai')->count();
+        $dariMutasiResmi = (clone $queryBasis)->whereNotNull('id_item_mutasi')->count();
+
+        $kpi = [
+            [
+                'label' => 'Total pencatatan',
+                'nilai' => number_format($totalPencatatan, 0, ',', '.'),
+                'keterangan' => $namaUnitRingkas,
+                'nada' => 'sukses',
+            ],
+            [
+                'label' => 'Penempatan aktif',
+                'nilai' => number_format($penempatanAktif, 0, ',', '.'),
+                'keterangan' => 'Lokasi aset saat ini',
+                'nada' => 'sukses',
+            ],
+            [
+                'label' => 'Selesai / berpindah',
+                'nilai' => number_format($selesaiBerpindah, 0, ',', '.'),
+                'keterangan' => 'Riwayat lokasi sebelumnya',
+                'nada' => 'netral',
+            ],
+            [
+                'label' => 'Dari mutasi resmi',
+                'nilai' => number_format($dariMutasiResmi, 0, ',', '.'),
+                'keterangan' => 'Terkait pengajuan mutasi',
+                'nada' => 'peringatan',
+            ],
+        ];
+
+        $riwayat = (clone $queryBasis)
+            ->when($filter['q'] ?? null, function (Builder $query, string $kata) {
+                $query->where(function (Builder $where) use ($kata) {
+                    $where->whereHas('aset', function (Builder $qa) use ($kata) {
+                        $qa->where('kode_aset', 'like', "%{$kata}%")
+                            ->orWhere('nama_barang', 'like', "%{$kata}%");
+                    })
+                        ->orWhereHas('ruangan', function (Builder $qr) use ($kata) {
+                            $qr->where('nama_ruangan', 'like', "%{$kata}%")
+                                ->orWhere('nomor_ruangan', 'like', "%{$kata}%");
+                        })
+                        ->orWhereHas('penanggungJawab', fn (Builder $qp) => $qp->where('nama_lengkap', 'like', "%{$kata}%"))
+                        ->orWhereHas('itemMutasi.pengajuan', fn (Builder $qm) => $qm->where('nomor_pengajuan', 'like', "%{$kata}%"));
+                });
+            })
+            ->when($filter['status'] ?? null, function (Builder $query, string $status) {
+                if ($status === 'aktif') {
+                    $query->whereNull('tanggal_selesai');
+                } elseif ($status === 'selesai') {
+                    $query->whereNotNull('tanggal_selesai');
+                }
+            })
+            ->orderByDesc('tanggal_mulai')
+            ->orderByDesc('id_penempatan')
+            ->paginate(10)
+            ->withQueryString()
+            ->through(function (PenempatanAset $p) {
+                $ruangan = $p->ruangan;
+                $namaRuangan = $ruangan
+                    ? trim(($ruangan->gedung?->nama_gedung ? $ruangan->gedung->nama_gedung.' - ' : '').($ruangan->nama_ruangan ?: "R. {$ruangan->nomor_ruangan}"))
+                    : 'Belum ditempatkan';
+
+                return [
+                    'id_penempatan' => $p->id_penempatan,
+                    'id_aset' => $p->id_aset,
+                    'kode_aset' => $p->aset?->kode_aset ?? '-',
+                    'nama_barang' => $p->aset?->nama_barang ?? 'Aset tidak ditemukan',
+                    'kategori' => $p->aset?->kategori?->nama_kategori ?? '-',
+                    'ruangan' => $namaRuangan,
+                    'penanggung_jawab' => $p->penanggungJawab?->nama_lengkap ?? 'Belum ditentukan',
+                    'tanggal_mulai_label' => $p->tanggal_mulai?->locale('id')->translatedFormat('j M Y') ?? '-',
+                    'tanggal_selesai_label' => $p->tanggal_selesai?->locale('id')->translatedFormat('j M Y') ?? 'Sekarang',
+                    'aktif' => $p->tanggal_selesai === null,
+                    'nomor_mutasi' => $p->itemMutasi?->pengajuan?->nomor_pengajuan,
+                    'id_pengajuan_mutasi' => $p->itemMutasi?->id_pengajuan,
+                    'keterangan' => $p->keterangan ?: '-',
+                ];
+            });
+
+        return Inertia::render('Pemohon/RiwayatPerpindahan/Index', [
+            'unitInfo' => [
+                'nama_unit' => $namaUnit,
+                'nama_ringkas' => $namaUnitRingkas,
+            ],
+            'kpi' => $kpi,
+            'riwayat' => $riwayat,
+            'filter' => [
+                'q' => $filter['q'] ?? '',
+                'status' => $filter['status'] ?? '',
+            ],
+        ]);
+    }
+
     public function asetPribadi(Request $request): Response
     {
         $filter = $request->validate([

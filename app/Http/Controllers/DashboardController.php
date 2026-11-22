@@ -6,7 +6,6 @@ use App\Models\Aset;
 use App\Models\ItemPerbaikan;
 use App\Models\PemeliharaanAset;
 use App\Models\PenempatanAset;
-use App\Models\PenerimaanAset;
 use App\Models\Pengajuan;
 use App\Models\Ruangan;
 use App\Models\User;
@@ -38,10 +37,9 @@ class DashboardController extends Controller
         $totalAset = Aset::query()->count();
 
         if ($totalAset > 0) {
-            $perluVerifikasi = Pengajuan::query()->whereIn('status', ['diajukan', 'disetujui_pimpinan'])->count()
-                + PenerimaanAset::query()->count();
+            $perluVerifikasi = Pengajuan::query()->whereIn('status', ['diajukan', 'disetujui_pimpinan'])->count();
             $perbaikanAktif = ItemPerbaikan::query()->whereIn('status_perbaikan', ['menunggu', 'dalam_perbaikan'])->count();
-            $jadwalPemeliharaan = PemeliharaanAset::query()->where('status', 'dijadwalkan')->count();
+            $jadwalPemeliharaan = PemeliharaanAset::query()->where('status', 'terjadwal')->count();
 
             $contoh['kpi'] = [
                 [
@@ -52,20 +50,20 @@ class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Perlu verifikasi',
-                    'nilai' => (string) max($perluVerifikasi, 1),
-                    'keterangan' => 'Pengajuan & penerimaan aktif',
+                    'nilai' => (string) $perluVerifikasi,
+                    'keterangan' => 'Pengajuan aktif menunggu tindak lanjut',
                     'nada' => 'peringatan',
                 ],
                 [
                     'label' => 'Perbaikan aktif',
-                    'nilai' => (string) max($perbaikanAktif, 1),
-                    'keterangan' => 'Sedang ditangani teknisi',
+                    'nilai' => (string) $perbaikanAktif,
+                    'keterangan' => 'Sedang ditangani teknisi / vendor',
                     'nada' => 'sukses',
                 ],
                 [
                     'label' => 'Jadwal pemeliharaan',
-                    'nilai' => (string) ($jadwalPemeliharaan > 0 ? $jadwalPemeliharaan : 4),
-                    'keterangan' => 'Dalam 7 hari mendatang',
+                    'nilai' => (string) $jadwalPemeliharaan,
+                    'keterangan' => 'Terjadwal untuk pelaksanaan',
                     'nada' => 'sukses',
                 ],
             ];
@@ -110,7 +108,7 @@ class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Perlu persetujuan',
-                    'nilai' => (string) ($menungguPimpinan > 0 ? $menungguPimpinan : 3),
+                    'nilai' => (string) $menungguPimpinan,
                     'keterangan' => 'Menunggu keputusan pimpinan',
                     'nada' => 'peringatan',
                 ],
@@ -213,7 +211,7 @@ class DashboardController extends Controller
                 ->count();
 
             $data['kpi'] = [
-                ['label' => 'Aset unit', 'nilai' => (string) max($asetUnitCount, 1), 'keterangan' => $user->unit?->nama_unit ?? 'Unit Kerja FTI', 'nada' => 'sukses'],
+                ['label' => 'Aset unit', 'nilai' => (string) $asetUnitCount, 'keterangan' => $user->unit?->nama_unit ?? 'Unit Kerja FTI', 'nada' => 'sukses'],
                 ['label' => 'Pengajuan saya', 'nilai' => (string) $totalSaya, 'keterangan' => 'Total pengajuan tercatat', 'nada' => 'sukses'],
                 ['label' => 'Sedang diproses', 'nilai' => (string) $diprosesSaya, 'keterangan' => 'Menunggu pemeriksaan / persetujuan', 'nada' => 'peringatan'],
                 ['label' => 'Pengajuan selesai', 'nilai' => (string) $selesaiSaya, 'keterangan' => 'Telah ditindaklanjuti', 'nada' => 'sukses'],
@@ -318,7 +316,7 @@ class DashboardController extends Controller
             $aktifCount = $tugasTeknisi->whereIn('status_perbaikan', ['menunggu', 'dalam_perbaikan'])->count();
             $selesaiCount = $tugasTeknisi->where('status_perbaikan', 'selesai')->count();
 
-            $data['kpi'][0]['nilai'] = (string) max($aktifCount, 1);
+            $data['kpi'][0]['nilai'] = (string) $aktifCount;
             $data['kpi'][2]['nilai'] = (string) $selesaiCount;
         }
 

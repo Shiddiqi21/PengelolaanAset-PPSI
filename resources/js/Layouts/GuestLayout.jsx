@@ -20,8 +20,8 @@ export default function GuestLayout({ children }) {
                 }}
             >
                 <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
-                        <ApplicationLogo className="h-7 w-7 text-white" />
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm">
+                        <ApplicationLogo className="h-full w-full" />
                     </span>
                     <div>
                         <p className="text-sm font-semibold">Universitas Andalas</p>

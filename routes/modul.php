@@ -71,6 +71,7 @@ Route::middleware('role:operator')->group(function () use ($sementara) {
     // Perbaikan
     Route::get('/perbaikan', [PerbaikanController::class, 'indexOperator'])->name('perbaikan.index');
     Route::post('/perbaikan/{itemPerbaikan}/tugaskan', [PerbaikanController::class, 'tugaskanTeknisi'])->name('perbaikan.tugaskan');
+    Route::post('/perbaikan/{itemPerbaikan}/selesai-vendor', [PerbaikanController::class, 'selesaikanVendor'])->name('perbaikan.selesai-vendor');
 
     // Pemeliharaan
     Route::get('/pemeliharaan', [PemeliharaanController::class, 'index'])->name('pemeliharaan.index');
@@ -141,7 +142,7 @@ Route::middleware('role:pemohon')->prefix('pemohon')->group(function () use ($se
     Route::match(['put', 'patch', 'post'], '/pengajuan/{pengajuan}', [PengadaanController::class, 'update'])->name('pemohon.pengajuan.update');
     Route::post('/pengajuan/{pengajuan}/kirim', [PengajuanController::class, 'kirimDraft'])->name('pemohon.pengajuan.kirim');
 
-    Route::get('/riwayat-perpindahan', $sementara)->defaults('judul', 'Riwayat perpindahan')->name('pemohon.riwayat-perpindahan');
+    Route::get('/riwayat-perpindahan', [AsetController::class, 'riwayatPerpindahan'])->name('pemohon.riwayat-perpindahan');
 });
 
 Route::middleware('role:pegawai')->prefix('pegawai')->group(function () use ($sementara) {

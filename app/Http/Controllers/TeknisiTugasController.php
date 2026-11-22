@@ -99,10 +99,12 @@ class TeknisiTugasController extends Controller
                 'max:1500',
             ],
             'biaya_aktual' => ['nullable', 'numeric', 'min:0'],
+            'kondisi_akhir' => ['nullable', 'in:baik,kurang_baik,rusak_berat'],
         ], [
             'status_perbaikan.required' => 'Pilih status perbaikan.',
             'status_perbaikan.in' => 'Status perbaikan tidak valid.',
             'hasil_perbaikan.required' => 'Tindakan hasil perbaikan wajib diisi jika status selesai.',
+            'kondisi_akhir.in' => 'Kondisi akhir aset tidak valid.',
         ]);
 
         DB::transaction(function () use ($itemPerbaikan, $validated, $user) {
@@ -125,20 +127,29 @@ class TeknisiTugasController extends Controller
             $pengajuan = $itemPerbaikan->pengajuan;
 
             if ($isSelesai) {
+                $kondisiAkhir = $validated['kondisi_akhir'] ?? 'baik';
+
                 // Perbarui status pengajuan menjadi selesai
                 $pengajuan->update(['status' => 'selesai']);
 
-                // Kembalikan aset ke kondisi baik dan aktif
+                // Kembalikan aset ke status aktif dengan kondisi hasil verifikasi teknisi
                 $itemPerbaikan->aset()->update([
-                    'kondisi' => 'baik',
+                    'kondisi' => $kondisiAkhir,
                     'status_aset' => 'aktif',
                 ]);
+
+                $labelKondisi = match ($kondisiAkhir) {
+                    'baik' => 'Baik',
+                    'kurang_baik' => 'Rusak Ringan',
+                    'rusak_berat' => 'Rusak Berat (Direkomendasikan untuk diusulkan penghapusan)',
+                    default => $kondisiAkhir,
+                };
 
                 RiwayatStatusPengajuan::query()->create([
                     'id_pengajuan' => $pengajuan->id_pengajuan,
                     'id_pengguna' => $user->id_pengguna,
                     'status_baru' => 'selesai',
-                    'catatan' => 'Perbaikan aset telah selesai dikerjakan oleh teknisi fakultas (' . $user->nama_lengkap . '). Tindakan: ' . $validated['hasil_perbaikan'],
+                    'catatan' => 'Perbaikan aset telah selesai ditangani oleh teknisi fakultas (' . $user->nama_lengkap . "). Kondisi akhir aset: {$labelKondisi}. Tindakan: " . $validated['hasil_perbaikan'],
                     'waktu' => now(),
                 ]);
             } else {

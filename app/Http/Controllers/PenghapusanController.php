@@ -590,10 +590,14 @@ class PenghapusanController extends Controller
 
                 // 2. Perbarui status dan kondisi aset di master aset
                 if ($item->aset) {
-                    $item->aset->update([
-                        'status_aset' => 'dihapus',
-                        'kondisi' => 'rusak_berat',
-                    ]);
+                    $dataUpdateAset = ['status_aset' => 'dihapus'];
+
+                    // Aset layak pakai yang dihapuskan via sharing internal atau hibah tetap mempertahankan kondisi fisiknya
+                    if (! in_array($jalur, ['sharing_internal', 'hibah_luar', 'hibah'], true)) {
+                        $dataUpdateAset['kondisi'] = 'rusak_berat';
+                    }
+
+                    $item->aset->update($dataUpdateAset);
 
                     // 3. Tutup penempatan aktif di penempatan_aset
                     PenempatanAset::where('id_aset', $item->id_aset)

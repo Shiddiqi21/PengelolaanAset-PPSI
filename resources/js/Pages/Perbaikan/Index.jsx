@@ -27,16 +27,25 @@ function formatRupiah(angka) {
     }).format(angka);
 }
 
-export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, filters }) {
+export default function Index({ daftarPerbaikan, daftarTeknisi = [], daftarVendor = [], tabAktif, filters }) {
     const [q, setQ] = useState(filters.q || '');
     const [modalBuka, setModalBuka] = useState(false);
     const [targetItem, setTargetItem] = useState(null);
     const isFirstRender = useRef(true);
 
     const formTugaskan = useForm({
+        jenis_pelaksana: 'teknisi',
         id_teknisi: daftarTeknisi[0]?.id_pengguna ? String(daftarTeknisi[0].id_pengguna) : '',
+        id_vendor: daftarVendor[0]?.id_vendor ? String(daftarVendor[0].id_vendor) : '',
+        harga_penawaran: '',
         estimasi_biaya: '',
         catatan: '',
+    });
+
+    const formSelesaiVendor = useForm({
+        hasil_perbaikan: '',
+        biaya_aktual: '',
+        kondisi_akhir: 'baik',
     });
 
     const terapkanFilter = (keyword, tab) => {
@@ -72,15 +81,25 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
         formTugaskan.reset();
         formTugaskan.clearErrors();
         formTugaskan.setData({
+            jenis_pelaksana: 'teknisi',
             id_teknisi: daftarTeknisi[0]?.id_pengguna ? String(daftarTeknisi[0].id_pengguna) : '',
+            id_vendor: daftarVendor[0]?.id_vendor ? String(daftarVendor[0].id_vendor) : '',
+            harga_penawaran: '',
             estimasi_biaya: item.estimasi_biaya ? String(item.estimasi_biaya) : '',
             catatan: '',
+        });
+        formSelesaiVendor.reset();
+        formSelesaiVendor.clearErrors();
+        formSelesaiVendor.setData({
+            hasil_perbaikan: '',
+            biaya_aktual: item.harga_penawaran ? String(item.harga_penawaran) : (item.estimasi_biaya ? String(item.estimasi_biaya) : ''),
+            kondisi_akhir: 'baik',
         });
         setModalBuka(true);
     };
 
     const tutupModal = () => {
-        if (!formTugaskan.processing) {
+        if (!formTugaskan.processing && !formSelesaiVendor.processing) {
             setModalBuka(false);
             setTargetItem(null);
         }
@@ -91,6 +110,18 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
         if (!targetItem) return;
 
         formTugaskan.post(route('perbaikan.tugaskan', targetItem.id_item_perbaikan), {
+            preserveScroll: true,
+            onSuccess: () => {
+                tutupModal();
+            },
+        });
+    };
+
+    const kirimSelesaiVendor = (e) => {
+        e.preventDefault();
+        if (!targetItem) return;
+
+        formSelesaiVendor.post(route('perbaikan.selesai-vendor', targetItem.id_item_perbaikan), {
             preserveScroll: true,
             onSuccess: () => {
                 tutupModal();
@@ -147,7 +178,11 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
                             : 'border border-line bg-white text-ink-700 hover:bg-surface'
                     }`}
                 >
-                    {b.bisa_ditugaskan ? 'Tugaskan pelaksana' : 'Lihat rincian'}
+                    {b.bisa_ditugaskan
+                        ? 'Tugaskan pelaksana'
+                        : b.bisa_diselesaikan_operator
+                          ? 'Catat selesai vendor'
+                          : 'Lihat rincian'}
                 </button>
             ),
         },
@@ -160,7 +195,7 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
             <PageHeader
                 breadcrumb={['FTI', 'Perbaikan aset']}
                 judul="Pemrosesan perbaikan aset"
-                deskripsi="Kelola penugasan teknisi internal fakultas untuk usulan perbaikan aset yang telah disetujui pimpinan."
+                deskripsi="Kelola penugasan teknisi internal fakultas atau vendor eksternal untuk usulan perbaikan aset yang telah disetujui pimpinan."
             />
 
             <div className="space-y-4">
@@ -240,7 +275,11 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
                         <div className="flex items-start justify-between border-b border-line pb-4">
                             <div>
                                 <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-                                    {targetItem.bisa_ditugaskan ? 'Penugasan Pelaksana Perbaikan' : 'Rincian Perbaikan Aset'}
+                                    {targetItem.bisa_ditugaskan
+                                        ? 'Penugasan Pelaksana Perbaikan'
+                                        : targetItem.bisa_diselesaikan_operator
+                                          ? 'Catat Penyelesaian Vendor'
+                                          : 'Rincian Perbaikan Aset'}
                                 </span>
                                 <h3 className="text-xl font-bold text-ink-900">{targetItem.nomor_pengajuan}</h3>
                                 <p className="text-xs text-ink-600">
@@ -290,6 +329,12 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
                                         <span className="font-semibold text-ink-900">Pelaksana Ditugaskan:</span>
                                         <span className="font-medium text-brand-700">{targetItem.pelaksana}</span>
                                     </div>
+                                    {targetItem.perlu_vendor && targetItem.harga_penawaran > 0 && (
+                                        <div className="flex justify-between items-center border-b border-line pb-2">
+                                            <span className="font-semibold text-ink-900">Harga Penawaran Vendor:</span>
+                                            <span className="font-medium text-ink-900">{formatRupiah(targetItem.harga_penawaran)}</span>
+                                        </div>
+                                    )}
                                     {targetItem.hasil_pemeriksaan && (
                                         <div>
                                             <span className="font-medium text-ink-500 block">Analisis / Hasil Pemeriksaan Teknisi:</span>
@@ -315,25 +360,109 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
                             {targetItem.bisa_ditugaskan && (
                                 <form id="form-penugasan" onSubmit={kirimPenugasan} className="space-y-4">
                                     <Field
-                                        label="Teknisi Fakultas yang Ditugaskan"
-                                        htmlFor="id_teknisi"
-                                        error={formTugaskan.errors.id_teknisi}
+                                        label="Jenis Pelaksana Perbaikan"
+                                        htmlFor="jenis_pelaksana"
+                                        error={formTugaskan.errors.jenis_pelaksana}
                                     >
-                                        <SelectInput
-                                            id="id_teknisi"
-                                            className="block w-full"
-                                            value={formTugaskan.data.id_teknisi}
-                                            onChange={(e) => formTugaskan.setData('id_teknisi', e.target.value)}
-                                            required
-                                        >
-                                            <option value="">-- Pilih teknisi fakultas --</option>
-                                            {daftarTeknisi.map((t) => (
-                                                <option key={t.id_pengguna} value={t.id_pengguna}>
-                                                    {t.nama_lengkap} (NIP: {t.nip || '-'})
-                                                </option>
+                                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                            {[
+                                                {
+                                                    value: 'teknisi',
+                                                    label: 'Teknisi Internal Fakultas',
+                                                    sub: 'Ditangani tim teknisi FTI',
+                                                },
+                                                {
+                                                    value: 'vendor',
+                                                    label: 'Vendor Eksternal',
+                                                    sub: 'Diserahkan ke rekanan jasa/garansi',
+                                                },
+                                            ].map((opt) => (
+                                                <label
+                                                    key={opt.value}
+                                                    className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition ${
+                                                        formTugaskan.data.jenis_pelaksana === opt.value
+                                                            ? 'border-brand-500 bg-brand-50/60'
+                                                            : 'border-line hover:bg-surface'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="jenis_pelaksana"
+                                                        value={opt.value}
+                                                        checked={formTugaskan.data.jenis_pelaksana === opt.value}
+                                                        onChange={(e) => formTugaskan.setData('jenis_pelaksana', e.target.value)}
+                                                        className="mt-0.5 text-brand-600 focus:ring-brand-600"
+                                                    />
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-ink-900">{opt.label}</p>
+                                                        <p className="text-[11px] text-ink-500">{opt.sub}</p>
+                                                    </div>
+                                                </label>
                                             ))}
-                                        </SelectInput>
+                                        </div>
                                     </Field>
+
+                                    {formTugaskan.data.jenis_pelaksana === 'teknisi' ? (
+                                        <Field
+                                            label="Teknisi Fakultas yang Ditugaskan"
+                                            htmlFor="id_teknisi"
+                                            error={formTugaskan.errors.id_teknisi}
+                                        >
+                                            <SelectInput
+                                                id="id_teknisi"
+                                                className="block w-full"
+                                                value={formTugaskan.data.id_teknisi}
+                                                onChange={(e) => formTugaskan.setData('id_teknisi', e.target.value)}
+                                                required
+                                            >
+                                                <option value="">-- Pilih teknisi fakultas --</option>
+                                                {daftarTeknisi.map((t) => (
+                                                    <option key={t.id_pengguna} value={t.id_pengguna}>
+                                                        {t.nama_lengkap} (NIP: {t.nip || '-'})
+                                                    </option>
+                                                ))}
+                                            </SelectInput>
+                                        </Field>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <Field
+                                                label="Vendor Eksternal yang Ditugaskan"
+                                                htmlFor="id_vendor"
+                                                error={formTugaskan.errors.id_vendor}
+                                            >
+                                                <SelectInput
+                                                    id="id_vendor"
+                                                    className="block w-full"
+                                                    value={formTugaskan.data.id_vendor}
+                                                    onChange={(e) => formTugaskan.setData('id_vendor', e.target.value)}
+                                                    required
+                                                >
+                                                    <option value="">-- Pilih vendor eksternal --</option>
+                                                    {daftarVendor.map((v) => (
+                                                        <option key={v.id_vendor} value={v.id_vendor}>
+                                                            {v.nama_vendor} {v.kontak ? `(${v.kontak})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </SelectInput>
+                                            </Field>
+
+                                            <Field
+                                                label="Harga Penawaran Vendor (Opsional)"
+                                                htmlFor="harga_penawaran"
+                                                error={formTugaskan.errors.harga_penawaran}
+                                            >
+                                                <TextInput
+                                                    id="harga_penawaran"
+                                                    type="number"
+                                                    min="0"
+                                                    className="block w-full"
+                                                    value={formTugaskan.data.harga_penawaran}
+                                                    onChange={(e) => formTugaskan.setData('harga_penawaran', e.target.value)}
+                                                    placeholder="Contoh: 1250000"
+                                                />
+                                            </Field>
+                                        </div>
+                                    )}
 
                                     <Field
                                         label="Estimasi Biaya / Plafon Maksimal (Opsional)"
@@ -366,6 +495,64 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
                                     </Field>
                                 </form>
                             )}
+
+                            {/* Form Catat Penyelesaian Vendor Eksternal */}
+                            {targetItem.bisa_diselesaikan_operator && (
+                                <form id="form-selesai-vendor" onSubmit={kirimSelesaiVendor} className="space-y-4 rounded-lg border border-line bg-surface p-4">
+                                    <h4 className="text-sm font-bold text-ink-900">Catat Penyelesaian Perbaikan Vendor</h4>
+
+                                    <Field
+                                        label="Tindakan / Hasil Perbaikan Vendor (Wajib)"
+                                        htmlFor="hasil_perbaikan_vendor"
+                                        error={formSelesaiVendor.errors.hasil_perbaikan}
+                                    >
+                                        <textarea
+                                            id="hasil_perbaikan_vendor"
+                                            rows={3}
+                                            required
+                                            className="block w-full rounded-lg border-line text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:ring-brand-600"
+                                            value={formSelesaiVendor.data.hasil_perbaikan}
+                                            onChange={(e) => formSelesaiVendor.setData('hasil_perbaikan', e.target.value)}
+                                            placeholder="Jelaskan hasil perbaikan atau penggantian komponen oleh vendor..."
+                                        />
+                                    </Field>
+
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <Field
+                                            label="Biaya Aktual Tagihan Vendor (Opsional)"
+                                            htmlFor="biaya_aktual_vendor"
+                                            error={formSelesaiVendor.errors.biaya_aktual}
+                                        >
+                                            <TextInput
+                                                id="biaya_aktual_vendor"
+                                                type="number"
+                                                min="0"
+                                                className="block w-full"
+                                                value={formSelesaiVendor.data.biaya_aktual}
+                                                onChange={(e) => formSelesaiVendor.setData('biaya_aktual', e.target.value)}
+                                                placeholder="Contoh: 1200000"
+                                            />
+                                        </Field>
+
+                                        <Field
+                                            label="Kondisi Akhir Aset"
+                                            htmlFor="kondisi_akhir_vendor"
+                                            error={formSelesaiVendor.errors.kondisi_akhir}
+                                        >
+                                            <SelectInput
+                                                id="kondisi_akhir_vendor"
+                                                className="block w-full"
+                                                value={formSelesaiVendor.data.kondisi_akhir}
+                                                onChange={(e) => formSelesaiVendor.setData('kondisi_akhir', e.target.value)}
+                                            >
+                                                <option value="baik">Baik — Berfungsi normal</option>
+                                                <option value="kurang_baik">Rusak Ringan — Berfungsi terbatas</option>
+                                                <option value="rusak_berat">Rusak Berat — Rekomendasi penghapusan</option>
+                                            </SelectInput>
+                                        </Field>
+                                    </div>
+                                </form>
+                            )}
                         </div>
 
                         <div className="flex items-center justify-end gap-3 border-t border-line pt-4">
@@ -376,6 +563,15 @@ export default function Index({ daftarPerbaikan, daftarTeknisi = [], tabAktif, f
                                     </SecondaryButton>
                                     <PrimaryButton type="submit" form="form-penugasan" disabled={formTugaskan.processing}>
                                         {formTugaskan.processing ? 'Menyimpan...' : 'Simpan penugasan'}
+                                    </PrimaryButton>
+                                </>
+                            ) : targetItem.bisa_diselesaikan_operator ? (
+                                <>
+                                    <SecondaryButton onClick={tutupModal} disabled={formSelesaiVendor.processing}>
+                                        Batal
+                                    </SecondaryButton>
+                                    <PrimaryButton type="submit" form="form-selesai-vendor" disabled={formSelesaiVendor.processing}>
+                                        {formSelesaiVendor.processing ? 'Menyimpan...' : 'Selesaikan perbaikan vendor'}
                                     </PrimaryButton>
                                 </>
                             ) : (

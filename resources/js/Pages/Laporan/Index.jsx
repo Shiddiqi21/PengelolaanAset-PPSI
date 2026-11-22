@@ -664,9 +664,11 @@ export default function Index({
                     <div className="bg-white p-4 text-xs text-ink-900">
                         <div className="flex items-start gap-4 border-b-2 border-ink-900 pb-3">
                             <div className="flex-shrink-0 pt-1">
-                                <svg className="h-12 w-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M4 18h16M4 10h16M12 3l9 5H3l9-5zM6 10v8M10 10v8M14 10v8M18 10v8" />
-                                </svg>
+                                <img
+                                    src="/images/logo-fti-ikon.png"
+                                    alt="Logo FTI Universitas Andalas"
+                                    className="h-12 w-12 object-contain"
+                                />
                             </div>
                             <div>
                                 <p className="text-sm font-bold uppercase">UNIVERSITAS ANDALAS</p>

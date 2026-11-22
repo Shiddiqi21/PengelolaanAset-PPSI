@@ -30,6 +30,7 @@ function formatRupiah(angka) {
 function KondisiBadge({ kondisi }) {
     const map = {
         baik: { label: 'Baik', nada: 'sukses' },
+        kurang_baik: { label: 'Rusak Ringan', nada: 'peringatan' },
         rusak_ringan: { label: 'Rusak Ringan', nada: 'peringatan' },
         rusak_berat: { label: 'Rusak Berat', nada: 'bahaya' },
         dalam_perbaikan: { label: 'Dalam Perbaikan', nada: 'info' },
@@ -56,6 +57,7 @@ export default function TugasIndex({
         hasil_pemeriksaan: '',
         hasil_perbaikan: '',
         biaya_aktual: '',
+        kondisi_akhir: 'baik',
     });
 
     // State & Form Modal Pemeliharaan
@@ -103,6 +105,7 @@ export default function TugasIndex({
             hasil_pemeriksaan: item.hasil_pemeriksaan || '',
             hasil_perbaikan: item.hasil_perbaikan || '',
             biaya_aktual: item.biaya_aktual ? String(item.biaya_aktual) : '',
+            kondisi_akhir: 'baik',
         });
         setModalPerbaikanBuka(true);
     };
@@ -558,13 +561,37 @@ export default function TugasIndex({
                                         placeholder="Contoh: 150000"
                                     />
                                 </Field>
+
+                                {isPerbaikanSelesai && (
+                                    <Field
+                                        label="Kondisi Akhir Aset Pasca Penanganan"
+                                        htmlFor="kondisi_akhir"
+                                        error={formPerbaikan.errors.kondisi_akhir}
+                                        petunjuk="Tentukan kondisi fisik aset setelah pemeriksaan/perbaikan selesai."
+                                    >
+                                        <select
+                                            id="kondisi_akhir"
+                                            className="block w-full rounded-lg border-line text-sm text-ink-900 focus:border-brand-600 focus:ring-brand-600"
+                                            value={formPerbaikan.data.kondisi_akhir}
+                                            onChange={(e) => formPerbaikan.setData('kondisi_akhir', e.target.value)}
+                                        >
+                                            <option value="baik">Baik — Berfungsi normal</option>
+                                            <option value="kurang_baik">Rusak Ringan — Berfungsi terbatas</option>
+                                            <option value="rusak_berat">
+                                                Rusak Berat — Tidak dapat diperbaiki / rekomendasi penghapusan
+                                            </option>
+                                        </select>
+                                    </Field>
+                                )}
                             </form>
                         </div>
 
                         <div className="flex items-center justify-between border-t border-line pt-4">
                             <p className="text-xs text-ink-500">
                                 {isPerbaikanSelesai
-                                    ? '✓ Status aset akan diperbarui menjadi "Aktif / Baik" setelah disimpan.'
+                                    ? formPerbaikan.data.kondisi_akhir === 'rusak_berat'
+                                        ? 'Aset akan kembali aktif dengan kondisi "Rusak Berat" agar dapat diusulkan penghapusan.'
+                                        : 'Status aset akan diperbarui sesuai kondisi akhir yang dipilih.'
                                     : 'Progres sementara akan disimpan tanpa mengubah status pengajuan.'}
                             </p>
                             <div className="flex items-center gap-3">

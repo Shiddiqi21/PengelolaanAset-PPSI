@@ -552,15 +552,22 @@ export default function BastIndex({
                         {/* Lembar Surat Resmi (Gaya Fisik A4 Kop FTI UNAND) */}
                         <div className="bg-white p-8 md:p-12 text-ink-900 font-serif leading-relaxed text-xs space-y-6 max-w-4xl mx-auto shadow-inner my-4 rounded border border-line">
                             {/* KOP SURAT */}
-                            <div className="text-center border-b-4 border-double border-ink-900 pb-3 font-sans">
-                                <p className="text-[11px] uppercase tracking-wider text-ink-700">Kementerian Pendidikan Tinggi, Sains, dan Teknologi</p>
-                                <p className="text-[12px] font-bold uppercase tracking-wider text-ink-900">Universitas Andalas</p>
-                                <h2 className="text-base font-bold uppercase text-brand-900 tracking-wide mt-0.5">
-                                    Fakultas Teknologi Informasi
-                                </h2>
-                                <p className="text-[10px] text-ink-500 mt-0.5">
-                                    Gedung FTI Kampus Limau Manis, Padang 25163 • Laman: https://fti.unand.ac.id • Pos-el: fti@unand.ac.id
-                                </p>
+                            <div className="relative flex items-center justify-center border-b-4 border-double border-ink-900 pb-3 font-sans">
+                                <img
+                                    src="/images/logo-fti-ikon.png"
+                                    alt="Logo FTI Universitas Andalas"
+                                    className="h-12 w-12 shrink-0 object-contain sm:absolute sm:left-2"
+                                />
+                                <div className="text-center">
+                                    <p className="text-[11px] uppercase tracking-wider text-ink-700">Kementerian Pendidikan Tinggi, Sains, dan Teknologi</p>
+                                    <p className="text-[12px] font-bold uppercase tracking-wider text-ink-900">Universitas Andalas</p>
+                                    <h2 className="text-base font-bold uppercase text-brand-900 tracking-wide mt-0.5">
+                                        Fakultas Teknologi Informasi
+                                    </h2>
+                                    <p className="text-[10px] text-ink-500 mt-0.5">
+                                        Gedung FTI Kampus Limau Manis, Padang 25163 • Laman: https://fti.unand.ac.id • Pos-el: fti@unand.ac.id
+                                    </p>
+                                </div>
                             </div>
 
                             {/* JUDUL BAST */}

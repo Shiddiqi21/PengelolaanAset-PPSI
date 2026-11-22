@@ -122,7 +122,7 @@ function Sidebar({ onPilih }) {
         <div className="flex w-full flex-col border-r border-line bg-white">
             <div className="px-[22px] pb-1 pt-7">
                 <div className="flex items-center gap-2.5">
-                    <ApplicationLogo className="h-8 w-8 shrink-0 text-brand-600" />
+                    <ApplicationLogo className="h-9 w-9 shrink-0" />
                     <div>
                         <p className="text-xl font-bold leading-none tracking-tight text-brand-600">SIM ASET FTI</p>
                         <p className="mt-1 text-[10px] uppercase tracking-wide text-ink-500">Universitas Andalas</p>
@@ -136,30 +136,48 @@ function Sidebar({ onPilih }) {
                 <p className="mt-0.5 text-xs text-ink-500">Kampus Limau Manis, Padang</p>
             </div>
 
-            <nav aria-label="Menu utama" className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
-                {menu.map((kelompok) => (
-                    <div key={kelompok.peran}>
-                        <p className="px-[10px] pb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-600">
-                            {kelompok.peran.replace('/', ' / ')}
-                        </p>
-                        <ul className="space-y-0.5">
-                            {kelompok.item.map((item) => (
-                                <li key={item.href}>
-                                    <Link
-                                        href={item.href}
-                                        onClick={onPilih}
-                                        aria-current={item.aktif ? 'page' : undefined}
-                                        className={`block rounded-lg px-[10px] py-2 text-sm transition ${
-                                            item.aktif
-                                                ? 'bg-brand-50 font-semibold text-brand-600'
-                                                : 'text-ink-600 hover:bg-surface hover:text-ink-900'
-                                        }`}
-                                    >
-                                        {item.label}
-                                    </Link>
-                                </li>
+            <nav aria-label="Menu utama" className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
+                {menu.map((kelompok, index) => (
+                    <div key={kelompok.peran} className={index > 0 ? 'border-t border-line pt-5' : ''}>
+                        <div className="flex items-center justify-between gap-2 px-[10px] pb-2">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-900">
+                                {kelompok.peran.replace('/', ' / ')}
+                            </p>
+                            {menu.length > 1 && kelompok.aktif && (
+                                <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-600">
+                                    Aktif
+                                </span>
+                            )}
+                        </div>
+                        <div className="space-y-3.5">
+                            {kelompokkanItem(kelompok.item).map((bagian, subIndex) => (
+                                <div key={bagian.grup ?? `utama-${subIndex}`}>
+                                    {bagian.grup && (
+                                        <p className="px-[10px] pb-1 text-[10px] font-semibold uppercase tracking-wider text-brand-600">
+                                            {bagian.grup}
+                                        </p>
+                                    )}
+                                    <ul className="space-y-0.5">
+                                        {bagian.item.map((item) => (
+                                            <li key={item.href}>
+                                                <Link
+                                                    href={item.href}
+                                                    onClick={onPilih}
+                                                    aria-current={item.aktif ? 'page' : undefined}
+                                                    className={`block rounded-lg px-[10px] py-1.5 text-sm transition ${
+                                                        item.aktif
+                                                            ? 'bg-brand-50 font-semibold text-brand-600'
+                                                            : 'text-ink-600 hover:bg-surface hover:text-ink-900'
+                                                    }`}
+                                                >
+                                                    {item.label}
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             ))}
-                        </ul>
+                        </div>
                     </div>
                 ))}
             </nav>
@@ -175,4 +193,21 @@ function Sidebar({ onPilih }) {
             </div>
         </div>
     );
+}
+
+function kelompokkanItem(items) {
+    const hasil = [];
+
+    for (const item of items) {
+        const grup = item.grup ?? null;
+        const terakhir = hasil[hasil.length - 1];
+
+        if (terakhir && terakhir.grup === grup) {
+            terakhir.item.push(item);
+        } else {
+            hasil.push({ grup, item: [item] });
+        }
+    }
+
+    return hasil;
 }
